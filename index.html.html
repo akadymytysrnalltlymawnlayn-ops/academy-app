@@ -272,8 +272,8 @@ function mapSession(r){ return {id:r.id, studentId:r.student_id||'', studentName
 function studentToDb(s){ return {id:s.id, name:s.name, phone:s.phone||null, country:s.country||null, status:s.status, payment:s.payment, subjects:s.subjects||[], teacher_ids:s.teacherIds||[], notes:s.notes||null, archived:!!s.archived}; }
 function teacherToDb(t){ return {id:t.id, name:t.name, phone:t.phone||null, salary:t.salary||null, subjects:t.subjects||'', meet_link:t.meetLink||null, notes:t.notes||null, archived:!!t.archived}; }
 function sessionToDb(s){ return {id:s.id, student_id:s.studentId||null, student_name:s.studentName||null, teacher_id:s.teacherId||null, subjects:s.subjects||[], slots:s.slots||[], status:s.status, link:s.link||null, archived:!!s.archived}; }
-function mapTrial(r){ return {id:r.id, studentName:r.student_name||'', phone:r.phone||'', subject:r.subject||'', teacherName:r.teacher_name||'', schedule:r.schedule||'', status:r.status||'مجدولة', link:r.link||'', archived:!!r.archived}; }
-function trialToDb(t){ return {id:t.id, student_name:t.studentName||'', phone:t.phone||null, subject:t.subject||null, teacher_name:t.teacherName||null, schedule:t.schedule||null, status:t.status||'مجدولة', link:t.link||null, archived:!!t.archived}; }
+function mapTrial(r){ return {id:r.id, studentName:r.student_name||'', phone:r.phone||'', subject:r.subject||'', teacherName:r.teacher_name||'', schedule:r.schedule||'', slots:r.slots||[], status:r.status||'مجدولة', link:r.link||'', archived:!!r.archived}; }
+function trialToDb(t){ return {id:t.id, student_name:t.studentName||'', phone:t.phone||null, subject:t.subject||null, teacher_name:t.teacherName||null, schedule:t.schedule||null, slots:t.slots||[], status:t.status||'مجدولة', link:t.link||null, archived:!!t.archived}; }
 
 async function loadData(){
   try{
@@ -679,6 +679,7 @@ async function saveTrial(id){
     subject: document.getElementById('f_trSubject').value.trim(),
     teacherName: (selectedTrialTeacherId ? (DATA.teachers.find(x=>x.id===selectedTrialTeacherId)||{}).name : document.getElementById('f_trTeacherSearch').value.trim()) || '',
     schedule: scheduleTxt,
+    slots: newSlots.length ? newSlots : (existing ? (existing.slots||[]) : []),
     link: document.getElementById('f_trLink').value.trim(),
     status: document.getElementById('f_trStatus').value,
     archived: false
@@ -705,6 +706,25 @@ async function convertTrialToStudent(id){
   await doConvertTrial(id);
   showToast('🚀 تم تحويل الطالب بنجاح');
 }
+function parseScheduleText(text){
+  if(!text) return [];
+  const parts = text.split('،').map(p=>p.trim()).filter(Boolean);
+  const out = [];
+  parts.forEach(part=>{
+    const day = DAYS.find(d=>part.startsWith(d));
+    if(!day) return;
+    const rest = part.slice(day.length).trim(); // مثال: "5:00 م"
+    const m = rest.match(/(\d{1,2}):(\d{2})\s*(ص|م)/);
+    if(!m) return;
+    let h = parseInt(m[1],10);
+    const min = m[2];
+    const ampm = m[3];
+    if(ampm==='م' && h!==12) h += 12;
+    if(ampm==='ص' && h===12) h = 0;
+    out.push({day, time: `${String(h).padStart(2,'0')}:${min}`});
+  });
+  return out;
+}
 async function doConvertTrial(id){
   const t = DATA.trials.find(x=>x.id===id); if(!t || t.archived) return;
 
@@ -718,8 +738,9 @@ async function doConvertTrial(id){
   const matchedTeacher = DATA.teachers.find(x=>!x.archived && x.name.trim()===(t.teacherName||'').trim());
   if(matchedTeacher){ newStudent.teacherIds=[matchedTeacher.id]; await sb.from('students').update({teacher_ids:[matchedTeacher.id]}).eq('id',newStudent.id); }
 
-  // 3) إنشاء حصة في الجدول الأساسي
-  const newSession = { id: uid(), studentId:newStudent.id, studentName:newStudent.name, teacherId: matchedTeacher?matchedTeacher.id:null, subjects: t.subject?[t.subject]:[], slots:[], status:'مشترك', link:'', archived:false };
+  // 3) إنشاء حصة في الجدول الأساسي بنفس مواعيد الحصة التجريبية
+  const finalSlots = (t.slots && t.slots.length) ? t.slots : parseScheduleText(t.schedule);
+  const newSession = { id: uid(), studentId:newStudent.id, studentName:newStudent.name, teacherId: matchedTeacher?matchedTeacher.id:null, subjects: t.subject?[t.subject]:[], slots:finalSlots, status:'مشترك', link:t.link||'', archived:false };
   const { error: e2 } = await sb.from('sessions').insert(sessionToDb(newSession));
   if(!e2){ DATA.sessions.unshift(newSession); }
 
@@ -1007,6 +1028,7 @@ async function saveSession(id){
       subject: [...sSubjects].join('، '),
       teacherName: teacherObj ? teacherObj.name : '',
       schedule: scheduleTxt,
+      slots: slots,
       status: statusMap[formStatus] || 'مجدولة',
       link: document.getElementById('f_sLink').value.trim(),
       archived: false
