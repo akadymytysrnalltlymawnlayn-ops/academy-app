@@ -1,7 +1,7 @@
 const webpush = require('web-push');
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY; // مفتاح السيرفر الخاص - يتجاوز صلاحيات RLS بأمان
 const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
 
@@ -26,7 +26,7 @@ module.exports = async (req, res) => {
   try {
     diag.envCheck = {
       SUPABASE_URL: !!SUPABASE_URL,
-      SUPABASE_ANON_KEY: !!SUPABASE_KEY,
+      SUPABASE_SERVICE_KEY: !!SUPABASE_KEY,
       VAPID_PUBLIC_KEY: !!VAPID_PUBLIC,
       VAPID_PRIVATE_KEY: !!VAPID_PRIVATE
     };
