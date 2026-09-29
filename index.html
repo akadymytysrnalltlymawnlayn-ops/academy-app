@@ -460,6 +460,9 @@ function jsAttr(str){ return String(str==null?'':str).replace(/\\/g,'\\\\').repl
 
 let CURRENT_PROFILE = null;
 const SUPERVISOR_ALLOWED_ROUTES = ['schedule_sessions','attendance','student_records'];
+// تحميل توزيع المشرفات مرة واحدة ثم إعادة استخدامه أثناء تحديث أرقام الحضور
+let ATTENDANCE_SUPERVISORS = null;
+let ATTENDANCE_SUPERVISORS_LOADING = null;
 async function fetchProfile(){
   try{
     const { data:{ user } } = await sb.auth.getUser();
@@ -660,7 +663,10 @@ function render(){
   if(ROUTE==='dashboard') m.innerHTML = pageDashboard();
   else if(ROUTE==='trials') m.innerHTML = pageTrials();
   else if(ROUTE==='student_records') m.innerHTML = pageStudentRecords();
-  else if(ROUTE==='attendance') m.innerHTML = pageAttendance();
+  else if(ROUTE==='attendance'){
+    m.innerHTML = pageAttendance();
+    if(isOwner()) refreshAttendanceSupervisors();
+  }
   else if(ROUTE==='students') m.innerHTML = pageStudents();
   else if(ROUTE==='teachers') m.innerHTML = pageTeachers();
   else if(ROUTE==='schedule_sessions') m.innerHTML = pageScheduleSessions();
@@ -814,7 +820,7 @@ async function saveStudent(id){
     archived: id ? (DATA.students.find(x=>x.id===id)||{}).archived||false : false
   };
   const { error } = await sb.from('students').upsert(studentToDb(obj));
-  if(error){ showToast('تعذر الحفظ'); return; }
+  if(error){ showToast('تعذر الحفظ: ' + (error.message||'تحقق من صلاحيات Supabase')); return; }
   const idx = DATA.students.findIndex(x=>x.id===id);
   if(idx>-1) DATA.students[idx]=obj; else DATA.students.push(obj);
   closeModal(); render(); showToast('تم حفظ بيانات الطالب');
@@ -853,6 +859,89 @@ function attendanceRowInfo(a){
     subject: (s.subjects||[]).join('، ')
   };
 }
+async function refreshAttendanceSupervisors(force=false){
+  if(!isOwner()) return;
+  if(!force && ATTENDANCE_SUPERVISORS) {
+    const box = document.getElementById('attendanceSupervisorReports');
+    if(box) box.innerHTML = renderAttendanceSupervisorReports(ATTENDANCE_SUPERVISORS);
+    return;
+  }
+  if(ATTENDANCE_SUPERVISORS_LOADING) return ATTENDANCE_SUPERVISORS_LOADING;
+
+  const box = document.getElementById('attendanceSupervisorReports');
+  if(box) box.innerHTML = `<div class="p-card" style="text-align:center;color:var(--text-dim);font-size:12px;">جاري تحميل توزيع المشرفات...</div>`;
+
+  ATTENDANCE_SUPERVISORS_LOADING = (async()=>{
+    try{
+      const result = await callSupervisorApi({ action:'list' });
+      if(!result.ok){
+        ATTENDANCE_SUPERVISORS = [];
+        if(box) box.innerHTML = `<div class="p-card" style="text-align:center;color:var(--coral);font-size:12px;">تعذر تحميل المشرفات: ${esc(result.error||'خطأ غير معروف')}</div>`;
+        return;
+      }
+      ATTENDANCE_SUPERVISORS = result.supervisors || [];
+      const liveBox = document.getElementById('attendanceSupervisorReports');
+      if(liveBox && ROUTE==='attendance') liveBox.innerHTML = renderAttendanceSupervisorReports(ATTENDANCE_SUPERVISORS);
+    }catch(e){
+      ATTENDANCE_SUPERVISORS = [];
+      const liveBox = document.getElementById('attendanceSupervisorReports');
+      if(liveBox) liveBox.innerHTML = `<div class="p-card" style="text-align:center;color:var(--coral);font-size:12px;">تعذر تحميل المشرفات: ${esc(e.message||'خطأ غير معروف')}</div>`;
+    } finally {
+      ATTENDANCE_SUPERVISORS_LOADING = null;
+    }
+  })();
+  return ATTENDANCE_SUPERVISORS_LOADING;
+}
+
+function renderAttendanceSupervisorReports(supervisors){
+  const today = new Date().toISOString().slice(0,10);
+  const todayDay = DAYS[todayArIdx()];
+
+  if(!supervisors || !supervisors.length){
+    return `<div class="p-card" style="text-align:center;color:var(--text-faint);font-size:12px;">لا توجد مشرفات مضافة أو لم يتم توزيع معلمات عليهن بعد.</div>`;
+  }
+
+  return supervisors.map((sup, i)=>{
+    const teacherIds = Array.isArray(sup.assignedTeacherIds) ? sup.assignedTeacherIds : [];
+    const teacherSet = new Set(teacherIds);
+    const todaySessions = DATA.sessions.filter(se=>
+      !se.archived && teacherSet.has(se.teacherId) &&
+      Array.isArray(se.slots) && se.slots.some(sl=>sl.day===todayDay)
+    );
+    const rows = todaySessions.map(se=>{
+      const att = DATA.attendance.find(a=>a.sessionId===se.id && a.date===today);
+      return { session: se, status: att ? att.status : 'لم يسجل' };
+    });
+
+    const total = rows.length;
+    const attended = rows.filter(r=>r.status==='حضر').length;
+    const absent = rows.filter(r=>r.status==='غاب').length;
+    const postponed = rows.filter(r=>r.status==='تأجيل').length;
+    const unmarked = rows.filter(r=>r.status==='لم يسجل').length;
+    const teacherNames = teacherIds.map(id=>DATA.teachers.find(t=>t.id===id)).filter(Boolean).map(t=>t.name);
+
+    return `<div class="p-card" style="border-radius:18px;margin-bottom:12px;padding:14px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;">
+        <div>
+          <div style="font-size:15px;font-weight:800;color:var(--ink);">👩‍💼 ${esc(sup.fullName||sup.email||('المشرفة '+(i+1)))}</div>
+          <div style="font-size:10.5px;color:var(--text-dim);margin-top:3px;">${teacherNames.length ? 'المعلمات: '+esc(teacherNames.join('، ')) : 'لم يتم تعيين معلمات لها بعد'}</div>
+        </div>
+        <span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;padding:5px 9px;">${teacherIds.length} معلمة</span>
+      </div>
+      <div class="stat-row" style="grid-template-columns:repeat(2,1fr);margin:0 0 8px;">
+        <div class="stat-card"><div class="num">${total}</div><div class="lbl">إجمالي حصص الطلاب اليوم</div></div>
+        <div class="stat-card"><div class="num" style="color:#15803d;">${attended}</div><div class="lbl">حضر</div></div>
+        <div class="stat-card"><div class="num" style="color:#b91c1c;">${absent}</div><div class="lbl">غاب</div></div>
+        <div class="stat-card"><div class="num" style="color:#b45309;">${postponed}</div><div class="lbl">تأجيل</div></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#f8fafc;border-radius:10px;padding:8px 10px;font-size:11px;color:var(--text-dim);">
+        <span>⏳ لم يسجل بعد: <b style="color:var(--ink);">${unmarked}</b></span>
+        <span>📅 اليوم: ${esc(todayDay)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function pageAttendance(){
   const q = attSearchQuery.trim().toLowerCase();
   const enriched = DATA.attendance.map(a=>({...a, ...attendanceRowInfo(a)}));
@@ -913,8 +1002,18 @@ function pageAttendance(){
     <h1 class="page-title">✅ متابعة الحضور</h1>
     <div class="sr-toolbar" style="margin-top:12px;">
       <input class="sr-search" placeholder="🔍 دوّر باسم الطالب أو المعلمة أو المادة..." value="${esc(attSearchQuery)}" oninput="attSearchQuery=this.value; render();">
+      ${isOwner()?`<button class="icon-btn" style="background:#e0f2fe;color:#0369a1;font-weight:700;padding:10px 12px;" onclick="ATTENDANCE_SUPERVISORS=null; refreshAttendanceSupervisors(true)">🔄 تحديث المشرفات</button>`:''}
     </div>
-    ${bodyHtml}
+    ${isOwner()?`
+      <div style="margin:12px 0 8px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div>
+          <div style="font-size:14px;font-weight:800;color:var(--ink);">📊 تقرير المشرفات — اليوم</div>
+          <div style="font-size:10.5px;color:var(--text-dim);margin-top:2px;">كل مشرفة منفصلة حسب المعلمات الموزعات عليها، بدون خلط أرقام الحضور.</div>
+        </div>
+      </div>
+      <div id="attendanceSupervisorReports">${ATTENDANCE_SUPERVISORS ? renderAttendanceSupervisorReports(ATTENDANCE_SUPERVISORS) : `<div class="p-card" style="text-align:center;color:var(--text-dim);font-size:12px;">جاري تحميل تقرير المشرفات...</div>`}</div>
+    `:''}
+    <div style="margin-top:18px;">${bodyHtml}</div>
   `;
 }
 // ============ نهاية متابعة الحضور ============
@@ -1041,41 +1140,41 @@ function openStudentRecordModal(id){
     <h3>${r?'تعديل بيانات الطالب':'➕ إضافة مشترك جديد'}</h3>
     <div class="row2">
       <div class="field"><label>اسم الطالب</label><input id="f_srStudentName" value="${esc(v.studentName)}" placeholder="اسم الطالب"></div>
-      <div class="field"><label>رقم الهاتف</label><input id="f_srPhone" value="${esc(v.studentPhone)}" placeholder="201001234567"></div>
+      <div class="field"><label>رقم الهاتف <span style="font-size:10px;color:#94a3b8;">(اختياري)</span></label><input id="f_srPhone" value="${esc(v.studentPhone)}" placeholder="201001234567"></div>
     </div>
     <div class="row2">
       <div class="field" style="position:relative;">
-        <label>اسم المعلمة</label>
+        <label>اسم المعلمة <span style="font-size:10px;color:#94a3b8;">(اختياري)</span></label>
         <input id="f_srTeacherName" value="${esc(v.teacherName)}" placeholder="اكتب حرفين للبحث" autocomplete="off" oninput="srTeacherTypeahead(this.value)">
         <div id="srTeacherSuggestions" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:8px;max-height:160px;overflow-y:auto;display:none;z-index:20;"></div>
       </div>
-      <div class="field"><label>المادة</label><input id="f_srSubject" value="${esc(v.subject)}" placeholder="المادة / الخدمة"></div>
+      <div class="field"><label>المادة <span style="font-size:10px;color:#94a3b8;">(اختياري)</span></label><input id="f_srSubject" value="${esc(v.subject)}" placeholder="المادة / الخدمة"></div>
     </div>
-    <div class="field"><label>واتساب المعلمة (تلقائي)</label><input id="f_srTeacherPhone" value="${esc(v.teacherPhone)}" placeholder="هيتملى لوحده لما تختار المعلمة" readonly style="background:#f8fafc;color:var(--text-dim);"></div>
+    <div class="field"><label>واتساب المعلمة (تلقائي) <span style="font-size:10px;color:#94a3b8;">(اختياري)</span></label><input id="f_srTeacherPhone" value="${esc(v.teacherPhone)}" placeholder="هيتملى لوحده لما تختار المعلمة" readonly style="background:#f8fafc;color:var(--text-dim);"></div>
     <div class="row2">
-      <div class="field"><label>نوع الخدمة</label><input id="f_srServiceType" value="${esc(v.serviceType)}" placeholder="منهج / تأسيس"></div>
-      <div class="field"><label>دورة الاشتراك</label><input id="f_srCycle" value="${esc(v.subscriptionCycle)}" placeholder="الاشتراك الأول"></div>
+      <div class="field"><label>نوع الخدمة <span style="font-size:10px;color:#94a3b8;">(اختياري)</span></label><input id="f_srServiceType" value="${esc(v.serviceType)}" placeholder="منهج / تأسيس"></div>
+      <div class="field"><label>دورة الاشتراك <span style="font-size:10px;color:#94a3b8;">(اختياري)</span></label><input id="f_srCycle" value="${esc(v.subscriptionCycle)}" placeholder="الاشتراك الأول"></div>
     </div>
     <div class="row2">
-      <div class="field"><label>عدد الحصص</label><input id="f_srSessionCount" value="${esc(v.sessionCount)}" placeholder="12"></div>
-      <div class="field"><label>مدة الحصة (دقيقة)</label>
+      <div class="field"><label>عدد الحصص <span style="font-size:10px;color:#94a3b8;">(اختياري)</span></label><input id="f_srSessionCount" value="${esc(v.sessionCount)}" placeholder="12"></div>
+      <div class="field"><label>مدة الحصة (دقيقة) <span style="font-size:10px;color:#94a3b8;">(اختياري)</span></label>
         <select id="f_srDuration">${durOptions.map(o=>`<option value="${o}" ${v.sessionDuration===o?'selected':''}>${o||'اختر المدة'}</option>`).join('')}</select>
       </div>
     </div>
     <div class="row2">
-      <div class="field"><label>سعر اشتراك الطالب</label><input id="f_srStudentPrice" value="${esc(v.studentPrice)}" placeholder="90"></div>
+      <div class="field"><label>سعر اشتراك الطالب <span style="font-size:10px;color:#94a3b8;">(اختياري)</span></label><input id="f_srStudentPrice" value="${esc(v.studentPrice)}" placeholder="90"></div>
       <div class="field"><label>حالة دفع الطالب</label>
         <select id="f_srPayStatus">${payOptions.map(o=>`<option value="${o}" ${v.studentPaymentStatus===o?'selected':''}>${o||'هيدفع ولا لأ؟'}</option>`).join('')}</select>
       </div>
     </div>
-    <div class="field"><label>تاريخ دفع الطالب</label><input id="f_srPayDate" type="date" value="${esc(v.studentPaymentDate)}"></div>
+    <div class="field"><label>تاريخ دفع الطالب <span style="font-size:10px;color:#94a3b8;">(اختياري)</span></label><input id="f_srPayDate" type="date" value="${esc(v.studentPaymentDate)}"></div>
     <div class="row2">
-      <div class="field"><label>سعر استحقاق المعلمة</label><input id="f_srTeacherPrice" value="${esc(v.teacherPrice)}" placeholder="375"></div>
+      <div class="field"><label>سعر استحقاق المعلمة <span style="font-size:10px;color:#94a3b8;">(اختياري)</span></label><input id="f_srTeacherPrice" value="${esc(v.teacherPrice)}" placeholder="375"></div>
       <div class="field"><label>حالة تحويل المعلمة</label>
         <select id="f_srTransferStatus">${trOptions.map(o=>`<option value="${o}" ${v.teacherTransferStatus===o?'selected':''}>${o||'اختر الحالة'}</option>`).join('')}</select>
       </div>
     </div>
-    <div class="field"><label>تاريخ تحويل المعلمة</label><input id="f_srTransferDate" type="date" value="${esc(v.teacherTransferDate)}"></div>
+    <div class="field"><label>تاريخ تحويل المعلمة <span style="font-size:10px;color:#94a3b8;">(اختياري)</span></label><input id="f_srTransferDate" type="date" value="${esc(v.teacherTransferDate)}"></div>
     <div class="modal-actions">
       <button class="save" onclick="saveStudentRecord('${r?r.id:''}')">${r?'حفظ':'➕ إضافة'}</button>
       <button class="cancel" onclick="closeModal()">إلغاء</button>
@@ -1126,12 +1225,12 @@ async function saveStudentRecord(id){
 
   if(id){
     const { error } = await sb.from('student_records').update(studentRecordToDb(rec)).eq('id', id);
-    if(error){ showToast('تعذر الحفظ'); return; }
+    if(error){ showToast('تعذر الحفظ: ' + (error.message||'تحقق من صلاحيات Supabase')); return; }
     const idx = DATA.student_records.findIndex(x=>x.id===id);
     DATA.student_records[idx] = rec;
   } else {
     const { error } = await sb.from('student_records').insert(studentRecordToDb(rec));
-    if(error){ showToast('تعذر الحفظ'); return; }
+    if(error){ showToast('تعذر الحفظ: ' + (error.message||'تحقق من صلاحيات Supabase')); return; }
     DATA.student_records.unshift(rec);
   }
   closeModal(); render(); showToast(id?'تم الحفظ':'✅ تم إضافة المشترك بنجاح');
@@ -1687,12 +1786,13 @@ async function upsertStudentFromSession(name, phone){
   if(existing){
     existing.name = name;
     if(phone) existing.phone = phone;
-    await sb.from('students').upsert(studentToDb(existing));
+    const { error } = await sb.from('students').update({name: existing.name, phone: existing.phone||null}).eq('id', existing.id);
+    if(error){ showToast('تعذر تحديث الطالب: ' + (error.message||'تحقق من RLS')); return ''; }
     return existing.id;
   }
   const newStudent = { id: uid(), name, phone, country:'', status:'تجريبي', payment:'معلق', subjects:[], teacherIds: selectedTeacherId?[selectedTeacherId]:[], notes:'', archived:false };
-  const { error } = await sb.from('students').upsert(studentToDb(newStudent));
-  if(error) return '';
+  const { error } = await sb.from('students').insert(studentToDb(newStudent));
+  if(error){ showToast('تعذر إضافة الطالب: ' + (error.message||'تحقق من RLS')); return ''; }
   DATA.students.push(newStudent);
   return newStudent.id;
 }
@@ -1747,7 +1847,8 @@ async function saveSession(id){
       const stu = DATA.students.find(x=>x.id===studentId);
       if(stu && !stu.teacherIds.includes(selectedTeacherId)) {
           stu.teacherIds.push(selectedTeacherId);
-          await sb.from('students').update({teacher_ids: stu.teacherIds}).eq('id', studentId);
+          const { error: teacherLinkError } = await sb.from('students').update({teacher_ids: stu.teacherIds}).eq('id', studentId);
+          if(teacherLinkError){ showToast('تعذر ربط المعلمة بالطالب: ' + (teacherLinkError.message||'تحقق من RLS')); return; }
       }
   }
 
