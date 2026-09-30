@@ -504,6 +504,7 @@ function mapStudentRecord(r){
     serviceType:r.service_type||'', subscriptionCycle:r.subscription_cycle||'', sessionDuration:r.session_duration||'',
     studentPaymentStatus:r.student_payment_status||'', studentPaymentDate:r.student_payment_date||'',
     teacherTransferStatus:r.teacher_transfer_status||'', teacherTransferDate:r.teacher_transfer_date||'',
+    slots:r.slots||[], // === تعديل: مواعيد الحصص ===
     archived:!!r.archived
   };
 }
@@ -514,6 +515,7 @@ function studentRecordToDb(r){
     service_type:r.serviceType||null, subscription_cycle:r.subscriptionCycle||null, session_duration:r.sessionDuration||null,
     student_payment_status:r.studentPaymentStatus||null, student_payment_date:r.studentPaymentDate||null,
     teacher_transfer_status:r.teacherTransferStatus||null, teacher_transfer_date:r.teacherTransferDate||null,
+    slots:r.slots||[], // === تعديل: مواعيد الحصص ===
     archived:!!r.archived
   };
 }
@@ -983,8 +985,7 @@ function renderSrList(){
   if(wrap) wrap.innerHTML = renderSrListInner(list);
 }
 function studentRecordCard(r){
-  const payCol = srPaymentColor(r.studentPaymentStatus);
-  const trCol = srTransferColor(r.teacherTransferStatus);
+  // === تعديل: تم حذف payCol و trCol (الحقول المالية) ===
   const cycleCol = srCycleColor(r.subscriptionCycle);
   const svcCol = srServiceColor(r.serviceType);
   return `<div class="sr-card">
@@ -1007,20 +1008,8 @@ function studentRecordCard(r){
       ${r.sessionCount?`<span class="sr-chip" style="background:#f1f5f9;color:#475569;">🔢 ${esc(r.sessionCount)} حصة</span>`:''}
       ${r.sessionDuration?`<span class="sr-chip" style="background:#f1f5f9;color:#475569;">⏱️ ${esc(r.sessionDuration)} د</span>`:''}
     </div>
-    <div class="sr-panels">
-      <div class="sr-panel student">
-        <div class="sr-panel-label">💵 اشتراك الطالب</div>
-        <div class="sr-panel-price">${esc(r.studentPrice)||'—'}</div>
-        ${r.studentPaymentStatus?`<span class="sr-panel-status" style="background:${payCol.bg};color:${payCol.c};">${esc(r.studentPaymentStatus)}</span>`:''}
-        ${r.studentPaymentDate?`<div class="sr-panel-date">📅 ${esc(r.studentPaymentDate)}</div>`:''}
-      </div>
-      <div class="sr-panel teacher">
-        <div class="sr-panel-label">💰 استحقاق المعلمة</div>
-        <div class="sr-panel-price">${esc(r.teacherPrice)||'—'}</div>
-        ${r.teacherTransferStatus?`<span class="sr-panel-status" style="background:${trCol.bg};color:${trCol.c};">${esc(r.teacherTransferStatus)}</span>`:''}
-        ${r.teacherTransferDate?`<div class="sr-panel-date">📅 ${esc(r.teacherTransferDate)}</div>`:''}
-      </div>
-    </div>
+    <!-- === تعديل: تم حذف اللوحتين الماليتين، وإضافة مواعيد الحصص بدلاً منهما === -->
+    ${(r.slots&&r.slots.length)?`<div class="sr-chips" style="margin-bottom:0;">${r.slots.map(sl=>`<span class="sr-chip" style="background:#ecfeff;color:#0e7490;">🗓️ ${esc(sl.day)} ${esc(formatTime12(sl.time))}</span>`).join('')}</div>`:''}
     <div class="sr-actions">
       <button class="icon-circle" style="background:#e0f2fe;color:#0369a1;" title="تعديل" onclick="openStudentRecordModal('${r.id}')">${ICON.edit}</button>
     </div>
@@ -1028,14 +1017,14 @@ function studentRecordCard(r){
 }
 function openStudentRecordModal(id){
   const r = id ? DATA.student_records.find(x=>x.id===id) : null;
-  const v = r || { studentName:'', studentPhone:'', teacherName:'', teacherPhone:'', subject:'', serviceType:'', subscriptionCycle:'', sessionCount:'', sessionDuration:'', studentPrice:'', studentPaymentStatus:'', studentPaymentDate:'', teacherPrice:'', teacherTransferStatus:'', teacherTransferDate:'' };
+  const v = r || { studentName:'', studentPhone:'', teacherName:'', teacherPhone:'', subject:'', serviceType:'', subscriptionCycle:'', sessionCount:'', sessionDuration:'', slots:[] }; // === تعديل: حذف الحقول المالية + إضافة slots ===
   selectedSrTeacherId = '';
   if(v.teacherName){
     const matched = DATA.teachers.find(t=>!t.archived && t.name.trim()===v.teacherName.trim());
     if(matched) selectedSrTeacherId = matched.id;
   }
-  const payOptions = ['','تم الدفع','لم يتم الدفع','تم الدفع 2','تم الدفع 3'];
-  const trOptions = ['','تم التحويل','لم يتم التحويل','تم التحويل 1','تم التحويل 2'];
+  // === تعديل: تم حذف payOptions و trOptions (الحقول المالية) ===
+  srSlotCount = 0; // === تعديل: عداد مواعيد الحصص ===
   const durOptions = ['','30','40','60'];
   document.getElementById('modalBody').innerHTML = `
     <h3>${r?'تعديل بيانات الطالب':'➕ إضافة مشترك جديد'}</h3>
@@ -1062,26 +1051,33 @@ function openStudentRecordModal(id){
         <select id="f_srDuration">${durOptions.map(o=>`<option value="${o}" ${v.sessionDuration===o?'selected':''}>${o||'اختر المدة'}</option>`).join('')}</select>
       </div>
     </div>
-    <div class="row2">
-      <div class="field"><label>سعر اشتراك الطالب</label><input id="f_srStudentPrice" value="${esc(v.studentPrice)}" placeholder="90"></div>
-      <div class="field"><label>حالة دفع الطالب</label>
-        <select id="f_srPayStatus">${payOptions.map(o=>`<option value="${o}" ${v.studentPaymentStatus===o?'selected':''}>${o||'هيدفع ولا لأ؟'}</option>`).join('')}</select>
-      </div>
+    <!-- === تعديل: تم حذف حقول (سعر الاشتراك، حالة/تاريخ الدفع، سعر/حالة/تاريخ تحويل المعلمة) === -->
+    <!-- === تعديل: قسم مواعيد الحصص (ديناميكي) === -->
+    <div class="field">
+      <label>مواعيد الحصص (اليوم + الوقت)</label>
+      <div id="srSlotsContainer"></div>
+      <button type="button" class="add-slot-btn" style="width:100%;padding:10px;font-size:12px;font-weight:700;" onclick="addSrSlotRow()">➕ إضافة موعد</button>
     </div>
-    <div class="field"><label>تاريخ دفع الطالب</label><input id="f_srPayDate" type="date" value="${esc(v.studentPaymentDate)}"></div>
-    <div class="row2">
-      <div class="field"><label>سعر استحقاق المعلمة</label><input id="f_srTeacherPrice" value="${esc(v.teacherPrice)}" placeholder="375"></div>
-      <div class="field"><label>حالة تحويل المعلمة</label>
-        <select id="f_srTransferStatus">${trOptions.map(o=>`<option value="${o}" ${v.teacherTransferStatus===o?'selected':''}>${o||'اختر الحالة'}</option>`).join('')}</select>
-      </div>
-    </div>
-    <div class="field"><label>تاريخ تحويل المعلمة</label><input id="f_srTransferDate" type="date" value="${esc(v.teacherTransferDate)}"></div>
     <div class="modal-actions">
       <button class="save" onclick="saveStudentRecord('${r?r.id:''}')">${r?'حفظ':'➕ إضافة'}</button>
       <button class="cancel" onclick="closeModal()">إلغاء</button>
     </div>
   `;
   openModal();
+  // === تعديل: تحميل المواعيد المحفوظة داخل الفورم ===
+  (v.slots||[]).forEach(sl=>addSrSlotRow(sl));
+}
+// === تعديل: دالة إضافة صف موعد (يوم + وقت) ===
+let srSlotCount = 0;
+function addSrSlotRow(slot){
+  srSlotCount++;
+  const id = 'srSlot_'+srSlotCount;
+  const div = document.createElement('div');
+  div.className='slot-row'; div.id=id;
+  const defaultDay = slot ? slot.day : DAYS[todayArIdx()];
+  const dayOpts = DAYS.map(d=>`<option ${defaultDay===d?'selected':''}>${d}</option>`).join('');
+  div.innerHTML = `<select class="srSlotDay">${dayOpts}</select><input type="time" class="srSlotTime" value="${slot?esc(slot.time||''):''}"><button type="button" style="background:#fff;color:var(--coral);border:1px solid #fee2e2;border-radius:6px;width:28px;height:28px;" onclick="document.getElementById('${id}').remove()">✕</button>`;
+  document.getElementById('srSlotsContainer').appendChild(div);
 }
 let selectedSrTeacherId = '';
 function srTeacherTypeahead(q){
@@ -1115,12 +1111,11 @@ async function saveStudentRecord(id){
     subscriptionCycle: document.getElementById('f_srCycle').value.trim(),
     sessionCount: document.getElementById('f_srSessionCount').value.trim(),
     sessionDuration: document.getElementById('f_srDuration').value.trim(),
-    studentPrice: document.getElementById('f_srStudentPrice').value.trim(),
-    studentPaymentStatus: document.getElementById('f_srPayStatus').value.trim(),
-    studentPaymentDate: document.getElementById('f_srPayDate').value.trim(),
-    teacherPrice: document.getElementById('f_srTeacherPrice').value.trim(),
-    teacherTransferStatus: document.getElementById('f_srTransferStatus').value.trim(),
-    teacherTransferDate: document.getElementById('f_srTransferDate').value.trim(),
+    // === تعديل: تم حذف قراءة الحقول المالية من الفورم (القيم القديمة المحفوظة تبقى كما هي عبر ...base) ===
+    // === تعديل: قراءة مواعيد الحصص (الصفوف التي بدون وقت تُتجاهل) ===
+    slots: [...document.querySelectorAll('#srSlotsContainer .slot-row')]
+      .map(row=>({day:row.querySelector('.srSlotDay').value, time:row.querySelector('.srSlotTime').value}))
+      .filter(sl=>sl.time),
   };
   if(!rec.studentName){ showToast('اكتب اسم الطالب'); return; }
 
@@ -1420,12 +1415,41 @@ function renderDaySchedule(){
         const timeB = b.slots.find(sl => sl.day === day)?.time || '';
         return timeA.localeCompare(timeB);
     });
+    // === تعديل: الجدولة التلقائية - توليد بطاقات حصص من مواعيد "بيانات الطلاب" لهذا اليوم ===
+    const recordItems = [];
+    DATA.student_records.filter(r => !r.archived && r.slots && r.slots.length).forEach(r => {
+        r.slots.filter(sl => sl.day === day && sl.time).forEach(sl => {
+            recordItems.push({ t: sl.time, html: recordClassCard(r, sl) });
+        });
+    });
+    // === تعديل: دمج بطاقات الحصص القديمة مع بطاقات بيانات الطلاب وترتيبها بالوقت ===
+    const items = daySessions.map(s => ({ t: (s.slots.find(sl => sl.day === day)?.time || ''), html: sessionCard(s) })).concat(recordItems);
+    items.sort((a, b) => a.t.localeCompare(b.t));
     return `
-        <div class="page-sub" style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">${daySessions.length} حصة يوم ${day}</div>
+        <div class="page-sub" style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">${items.length} حصة يوم ${day}</div>
         <div class="list">
-        ${daySessions.length? daySessions.map(s=>sessionCard(s)).join('') : `<div class="empty">${ICON.empty}<div>لا توجد حصص</div></div>`}
+        ${items.length? items.map(i=>i.html).join('') : `<div class="empty">${ICON.empty}<div>لا توجد حصص</div></div>`}
         </div>
     `;
+}
+// === تعديل: دالة جديدة - بطاقة حصة مولّدة تلقائياً من سجل طالب (تُقرأ دائماً من البيانات المحفوظة) ===
+function recordClassCard(r, sl){
+  return `<div class="session-card">
+    <div class="sc-header" onclick="openStudentRecordModal('${r.id}')">
+      <div class="sc-time">${esc(formatTime12(sl.time))}</div>
+      <div class="sc-info">
+        <h4>${esc(r.studentName)||'بدون اسم'} ${r.subject?`<span style="display:inline-block;background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-right:6px;vertical-align:middle;">${esc(r.subject)}</span>`:''}</h4>
+        <p>${esc(r.teacherName)||'بدون معلمة'}${r.sessionDuration?` • ${esc(r.sessionDuration)} د`:''}</p>
+      </div>
+      <div style="margin-right:auto;">
+        <span class="badge" style="background:#dcfce7;color:#15803d">مشترك</span>
+      </div>
+    </div>
+    <div class="sc-wa-buttons">
+      ${r.studentPhone?`<button class="wa-btn-sm wa-student-sm" onclick="window.open('${waLink(r.studentPhone)}','_blank')">${ICON.wa} الطالب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الطالب</button>`}
+      ${r.teacherPhone?`<button class="wa-btn-sm wa-teacher-sm" onclick="window.open('${waLink(r.teacherPhone)}','_blank')">${ICON.wa} المعلمة</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} المعلمة</button>`}
+    </div>
+  </div>`;
 }
 function sessionCard(s){
   const student = DATA.students.find(x=>x.id===s.studentId);
