@@ -154,6 +154,26 @@ input,select,textarea{font-family:inherit;}
 .sr-phone{font-size:11px;color:var(--text-dim);margin-top:2px;direction:ltr;text-align:right;}
 .sr-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
 .sr-chip{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+/* === تعديل: شارة المشرفة (تظهر للمالك فقط) === */
+.sr-owner-badge{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;padding:4px 12px;border-radius:20px;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;border:1px solid #fcd34d;margin-bottom:10px;}
+.sr-owner-badge.none{background:#f1f5f9;color:#64748b;border-color:var(--line);}
+/* === تعديل: أزرار تسجيل حالة الحصة داخل بطاقة الجدول === */
+.fu-bar{margin-top:8px;}
+.fu-date{font-size:10px;color:var(--text-dim);margin:2px 0 6px;display:flex;align-items:center;gap:4px;}
+.fu-status-row{display:flex;gap:6px;}
+.fu-btn{flex:1;border:none;border-radius:10px;padding:9px 6px;font-size:11.5px;font-weight:800;cursor:pointer;transition:transform .1s;}
+.fu-btn:active{transform:scale(.96);}
+.fu-note-row{display:flex;gap:6px;margin-top:6px;align-items:center;}
+.fu-note-row input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:11.5px;background:#f8fafc;}
+.fu-send{border:none;border-radius:10px;padding:9px 12px;background:linear-gradient(135deg,#14b8a6,#0d9488);color:#fff;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;}
+/* === تعديل: تبويب متابعات الحضور === */
+.fu-chip-row{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;margin-top:8px;}
+.fu-chip{flex:none;border:1px solid var(--line);background:#fff;color:var(--text-dim);font-size:11px;font-weight:700;padding:6px 14px;border-radius:20px;cursor:pointer;}
+.fu-chip.active{background:var(--teal-dark);border-color:var(--teal-dark);color:#fff;}
+.fu-rate{background:linear-gradient(135deg,#f0fdfa,#ccfbf1);border:1px solid #99f6e4;border-radius:14px;padding:10px 14px;margin:10px 0;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:var(--teal-dark);}
+.fu-rate b{font-size:20px;}
+.fu-entry{background:var(--card);border:1px solid var(--line);border-right-width:4px;border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);}
+.fu-time{font-size:10.5px;font-weight:800;background:#f1f5f9;color:#475569;padding:3px 9px;border-radius:20px;white-space:nowrap;}
 .sr-panels{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .sr-panel{border-radius:14px;padding:10px 12px;}
 .sr-panel.student{background:linear-gradient(135deg,#ecfdf5,#f0fdfa);}
@@ -450,16 +470,18 @@ function todayArIdx(){ const jd=new Date().getDay(); const map={0:1,1:2,2:3,3:4,
 function safeHistory(fn){
   try{ fn(); }catch(e){ /* بعض البيئات (زي فتح الملف مباشرة من غير سيرفر) بترفض History API - نتجاهل بأمان */ }
 }
-let DATA = { students:[], teachers:[], subjects:[], sessions:[], trials:[], student_records:[], attendance:[], settings:{} };
+let DATA = { students:[], teachers:[], subjects:[], sessions:[], trials:[], student_records:[], attendance:[], followups:[], settings:{} }; // === تعديل: إضافة followups (متابعات الحضور) ===
 let ROUTE = "dashboard";
 let scheduleDay = todayArIdx();
 
 function uid(){ return crypto.randomUUID(); }
+// === تعديل: دالة جديدة - تنظيف النص داخل خصائص الـ HTML (تشمل علامات التنصيص) ===
+function escAttr(str){ return esc(str).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function esc(str){ const d=document.createElement('div'); d.textContent=str==null?'':String(str); return d.innerHTML; }
 function jsAttr(str){ return String(str==null?'':str).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/[\r\n]/g,' '); }
 
 let CURRENT_PROFILE = null;
-const SUPERVISOR_ALLOWED_ROUTES = ['schedule_sessions','attendance','student_records'];
+const SUPERVISOR_ALLOWED_ROUTES = ['schedule_sessions','attendance','student_records','followups']; // === تعديل: إضافة تبويب متابعات الحضور للمشرفات ===
 async function fetchProfile(){
   try{
     const { data:{ user } } = await sb.auth.getUser();
@@ -502,6 +524,8 @@ function studentToDb(s){ return {id:s.id, name:s.name, phone:s.phone||null, coun
 function teacherToDb(t){ return {id:t.id, name:t.name, phone:t.phone||null, salary:t.salary||null, subjects:t.subjects||'', meet_link:t.meetLink||null, notes:t.notes||null, archived:!!t.archived}; }
 function sessionToDb(s){ return {id:s.id, student_id:s.studentId||null, student_name:s.studentName||null, teacher_id:s.teacherId||null, subjects:s.subjects||[], slots:s.slots||[], status:s.status, link:s.link||null, archived:!!s.archived}; }
 function mapTrial(r){ return {id:r.id, studentName:r.student_name||'', phone:r.phone||'', subject:r.subject||'', teacherName:r.teacher_name||'', schedule:r.schedule||'', slots:r.slots||[], status:r.status||'مجدولة', link:r.link||'', createdAt:r.created_at||'', archived:!!r.archived}; }
+// === تعديل: دوال جديدة - تحويل بيانات متابعات الحضور ===
+function mapFollowup(r){ return {id:r.id, recordId:r.student_record_id||'', supervisorId:r.supervisor_id||'', date:r.attend_date, slotTime:r.slot_time||'', status:r.status||'', note:r.note||'', studentName:r.student_name||'', teacherName:r.teacher_name||'', subject:r.subject||'', createdAt:r.created_at||''}; }
 function mapAttendance(r){ return {id:r.id, sessionId:r.session_id, date:r.attend_date, status:r.status, note:r.note||''}; }
 function mapStudentRecord(r){
   return {
@@ -512,6 +536,7 @@ function mapStudentRecord(r){
     teacherTransferStatus:r.teacher_transfer_status||'', teacherTransferDate:r.teacher_transfer_date||'',
     slots:r.slots||[], // === تعديل: مواعيد الحصص ===
     supervisorId:r.supervisor_id||'', // === تعديل: معرّف المشرفة صاحبة الطالب ===
+    groupLink:r.group_link||'', // === تعديل: رابط جروب الواتساب ===
     archived:!!r.archived
   };
 }
@@ -524,6 +549,7 @@ function studentRecordToDb(r){
     teacher_transfer_status:r.teacherTransferStatus||null, teacher_transfer_date:r.teacherTransferDate||null,
     slots:r.slots||[], // === تعديل: مواعيد الحصص ===
     supervisor_id:r.supervisorId||null, // === تعديل: معرّف المشرفة (يُحدَّد عند الإضافة ولا يتغير عند التعديل) ===
+    group_link:r.groupLink||null, // === تعديل: رابط جروب الواتساب ===
     archived:!!r.archived
   };
 }
@@ -534,14 +560,18 @@ async function loadData(){
     // === تعديل: عزل البيانات - المشرفة ترى طلابها فقط، والمالك يرى الجميع ===
     let srecQuery = sb.from('student_records').select('*').order('created_at');
     if(CURRENT_PROFILE && CURRENT_PROFILE.role === 'supervisor') srecQuery = srecQuery.eq('supervisor_id', CURRENT_PROFILE.id);
-    const [stu, tea, ses, subs, trl, srec, att] = await Promise.all([
+    // === تعديل: جلب متابعات الحضور (المشرفة ترى متابعاتها فقط) ===
+    let folQuery = sb.from('class_followups').select('*').order('attend_date', {ascending:false});
+    if(CURRENT_PROFILE && CURRENT_PROFILE.role === 'supervisor') folQuery = folQuery.eq('supervisor_id', CURRENT_PROFILE.id);
+    const [stu, tea, ses, subs, trl, srec, att, fol] = await Promise.all([
       sb.from('students').select('*'),
       sb.from('teachers').select('*'),
       sb.from('sessions').select('*'),
       sb.from('subjects').select('*').order('created_at'),
       sb.from('trials').select('*').order('created_at', {ascending:false}),
       srecQuery, // === تعديل: كان هنا الاستعلام المباشر على student_records ===
-      sb.from('attendance_log').select('*').order('attend_date', {ascending:false})
+      sb.from('attendance_log').select('*').order('attend_date', {ascending:false}),
+      folQuery // === تعديل: استعلام متابعات الحضور ===
     ]);
     if(stu.error) return;
     DATA.students = (stu.data||[]).map(mapStudent);
@@ -551,9 +581,31 @@ async function loadData(){
     DATA.trials = (trl.data||[]).map(mapTrial);
     DATA.student_records = (srec.data||[]).map(mapStudentRecord);
     DATA.attendance = (att.data||[]).map(mapAttendance);
+    DATA.followups = (fol && !fol.error) ? (fol.data||[]).map(mapFollowup) : []; // === تعديل: لو الجدول غير موجود يبقى فاضي بدون أخطاء ===
     setCloudStatus('connected');
   }catch(e){ showToast("تعذر تحميل البيانات"); setCloudStatus('error'); }
   render();
+  if(isOwner()) loadSupervisorNames(); // === تعديل: للمالك فقط - جلب أسماء المشرفات لشارة اسم المشرفة ===
+}
+// === تعديل: دوال جديدة - أسماء المشرفات (للمالك فقط) ===
+let SUPERVISOR_NAMES = {};
+let OWNER_UID = '';
+async function loadSupervisorNames(){
+  try{
+    OWNER_UID = (await getCurrentUserId()) || '';
+    const result = await callSupervisorApi({ action:'list' });
+    if(result && result.ok && result.supervisors){
+      SUPERVISOR_NAMES = {};
+      result.supervisors.forEach(sv=>{ SUPERVISOR_NAMES[sv.id] = sv.fullName || sv.email || 'مشرفة'; });
+    }
+  }catch(e){ /* لو تعذر الجلب تظهر الشارة بدون اسم */ }
+  render();
+}
+function supervisorLabel(id){
+  if(!id) return '';
+  if(SUPERVISOR_NAMES[id]) return SUPERVISOR_NAMES[id];
+  if(OWNER_UID && id===OWNER_UID) return 'المالك';
+  return 'مشرفة';
 }
 
 function subscribeRealtime(){
@@ -564,6 +616,7 @@ function subscribeRealtime(){
     .on('postgres_changes', {event:'*', schema:'public', table:'trials'}, p=>syncEntity('trials', mapTrial, p))
     .on('postgres_changes', {event:'*', schema:'public', table:'student_records'}, p=>syncEntity('student_records', mapStudentRecord, p))
     .on('postgres_changes', {event:'*', schema:'public', table:'attendance_log'}, p=>syncEntity('attendance', mapAttendance, p))
+    .on('postgres_changes', {event:'*', schema:'public', table:'class_followups'}, p=>syncEntity('followups', mapFollowup, p)) // === تعديل: تحديث لحظي لمتابعات الحضور ===
     .subscribe();
 }
 function syncEntity(type, mapper, payload){
@@ -573,7 +626,7 @@ function syncEntity(type, mapper, payload){
     if(idx>-1) arr.splice(idx,1);
   } else {
     // === تعديل: المشرفة لا تستقبل تحديثات طلاب غيرها ===
-    if(type==='student_records' && !isOwner() && payload.new.supervisor_id !== (CURRENT_PROFILE && CURRENT_PROFILE.id)) return;
+    if((type==='student_records' || type==='followups') && !isOwner() && payload.new.supervisor_id !== (CURRENT_PROFILE && CURRENT_PROFILE.id)) return;
     const row = mapper(payload.new);
     const idx = arr.findIndex(x=>x.id===row.id);
     if(idx>-1) arr[idx]=row; else arr.push(row);
@@ -649,6 +702,7 @@ const NAV_ITEMS = [
   {id:'student_records', label:'بيانات الطلاب', emoji:'📑', icon:ICON.students},
   {id:'schedule_sessions', label:'الجدول', emoji:'🗓️', icon:ICON.schedule},
   {id:'attendance', label:'متابعة الحضور', emoji:'✅', icon:ICON.schedule},
+  {id:'followups', label:'متابعات الحضور', emoji:'📋', icon:ICON.schedule}, // === تعديل: تبويب جديد ===
   {id:'teachers', label:'المعلمين', emoji:'👩‍🏫', icon:ICON.teachers},
   {id:'payments', label:'المدفوعات', emoji:'💳', icon:ICON.payments},
   {id:'reports', label:'التقارير', emoji:'📊', icon:ICON.reports},
@@ -676,6 +730,7 @@ function render(){
   else if(ROUTE==='trials') m.innerHTML = pageTrials();
   else if(ROUTE==='student_records') m.innerHTML = pageStudentRecords();
   else if(ROUTE==='attendance') m.innerHTML = pageAttendance();
+  else if(ROUTE==='followups') m.innerHTML = pageFollowups(); // === تعديل: تبويب متابعات الحضور ===
   else if(ROUTE==='students') m.innerHTML = pageStudents();
   else if(ROUTE==='teachers') m.innerHTML = pageTeachers();
   else if(ROUTE==='schedule_sessions') m.innerHTML = pageScheduleSessions();
@@ -933,6 +988,110 @@ function pageAttendance(){
   `;
 }
 // ============ نهاية متابعة الحضور ============
+// ============ متابعات الحضور (تبويب جديد) ============
+let fuSearch = '', fuPeriod = 'week', fuStatus = 'all';
+function fuFiltered(){
+  const q = fuSearch.trim().toLowerCase();
+  let minDate = '';
+  if(fuPeriod==='today') minDate = localDateStr(new Date());
+  else if(fuPeriod==='week'){ const d=new Date(); d.setDate(d.getDate()-6); minDate = localDateStr(d); }
+  else if(fuPeriod==='month'){ const d=new Date(); d.setDate(d.getDate()-29); minDate = localDateStr(d); }
+  return DATA.followups.filter(f=>{
+    if(minDate && f.date < minDate) return false;
+    if(fuStatus==='note'){ if(f.status) return false; }
+    else if(fuStatus!=='all' && f.status!==fuStatus) return false;
+    if(!q) return true;
+    return (f.studentName||'').toLowerCase().includes(q) || (f.teacherName||'').toLowerCase().includes(q) ||
+      (f.subject||'').toLowerCase().includes(q) || (f.note||'').toLowerCase().includes(q) ||
+      (isOwner() && supervisorLabel(f.supervisorId).toLowerCase().includes(q));
+  });
+}
+function setFuPeriod(v){ fuPeriod = v; render(); }
+function setFuStatus(v){ fuStatus = v; render(); }
+function renderFuList(){
+  const wrap = document.getElementById('fuListWrap');
+  if(wrap) wrap.innerHTML = fuListInner();
+}
+function fuListInner(){
+  const list = fuFiltered();
+  const attended = list.filter(f=>f.status==='حضر').length;
+  const absent = list.filter(f=>f.status==='غاب').length;
+  const postponed = list.filter(f=>f.status==='تأجيل').length;
+  const decided = attended + absent;
+  const rate = decided ? Math.round(attended*100/decided) : null;
+  const groups = {};
+  list.forEach(f=>{ (groups[f.date] = groups[f.date] || []).push(f); });
+  const dates = Object.keys(groups).sort((x,y)=> y.localeCompare(x));
+  const dayLabel = (dateStr)=>{
+    const d = new Date(dateStr+'T00:00:00');
+    if(isNaN(d)) return dateStr;
+    return d.toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long' });
+  };
+  const stats = `
+    <div class="stat-row" style="grid-template-columns:repeat(4,1fr);margin:10px 0;">
+      <div class="stat-card"><div class="num">${list.length}</div><div class="lbl">إجمالي المتابعات</div></div>
+      <div class="stat-card"><div class="num" style="color:#15803d;">${attended}</div><div class="lbl">حضر</div></div>
+      <div class="stat-card"><div class="num" style="color:#b91c1c;">${absent}</div><div class="lbl">غاب</div></div>
+      <div class="stat-card"><div class="num" style="color:#b45309;">${postponed}</div><div class="lbl">اتأجلت</div></div>
+    </div>
+    ${rate!==null?`<div class="fu-rate"><span>📈 نسبة الحضور (حضر ÷ حضر + غاب)</span><b>${rate}%</b></div>`:''}`;
+  const body = dates.length ? dates.map(date=>{
+    const items = groups[date].slice().sort((a,b)=> (a.slotTime||'').localeCompare(b.slotTime||''));
+    return `
+      <div style="display:flex;align-items:center;gap:10px;margin:16px 0 10px;">
+        <span style="font-size:12.5px;font-weight:800;color:var(--teal-dark);white-space:nowrap;">📅 ${esc(dayLabel(date))}</span>
+        <span style="flex:1;height:1px;background:linear-gradient(to left,var(--line),transparent);"></span>
+        <span style="font-size:10.5px;color:var(--text-dim);">${items.length} حصة</span>
+      </div>
+      <div class="list">
+        ${items.map(f=>{
+          const col = attStatusColor(f.status);
+          const sup = (isOwner() && f.supervisorId) ? `<span class="sr-owner-badge" style="margin:6px 0 0;">👤 ${esc(supervisorLabel(f.supervisorId))}</span>` : '';
+          return `<div class="fu-entry" style="border-right-color:${col.c};">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+              <div style="min-width:0;">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                  ${f.slotTime?`<span class="fu-time">🕒 ${esc(formatTime12(f.slotTime))}</span>`:''}
+                  <span class="p-name">${esc(f.studentName)||'بدون اسم'}</span>
+                </div>
+                <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">👩‍🏫 ${esc(f.teacherName)||'—'} ${f.subject?'• '+esc(f.subject):''}</div>
+              </div>
+              <span class="badge" style="background:${col.bg};color:${col.c};font-size:11px;padding:4px 10px;white-space:nowrap;">${f.status?esc(f.status):'📝 ملاحظة'}</span>
+            </div>
+            ${f.note?`<div style="font-size:11.5px;color:#475569;background:#f8fafc;border-radius:8px;padding:6px 9px;margin-top:8px;">📝 ${esc(f.note)}</div>`:''}
+            ${sup}
+          </div>`;
+        }).join('')}
+      </div>`;
+  }).join('') : `<div class="empty">${ICON.empty}<div>لا توجد متابعات في هذه الفترة</div></div>`;
+  return stats + body;
+}
+function pageFollowups(){
+  const chip = (active, label, fn) => `<button class="fu-chip ${active?'active':''}" onclick="${fn}">${label}</button>`;
+  return `
+    <h1 class="page-title">📋 متابعات الحضور</h1>
+    <div style="font-size:11.5px;color:var(--text-dim);margin-top:4px;">${isOwner()?'كل الحصص المسجّلة من كل المشرفات':'الحصص التي سجّلتيها من شاشة الجدول'}</div>
+    <div class="sr-toolbar" style="margin-top:12px;">
+      <input class="sr-search" placeholder="🔍 دوّر باسم الطالب أو المعلمة أو المادة أو الملاحظة${isOwner()?' أو المشرفة':''}..." value="${escAttr(fuSearch)}" oninput="fuSearch=this.value; renderFuList();">
+    </div>
+    <div class="fu-chip-row">
+      ${chip(fuPeriod==='today','اليوم',"setFuPeriod('today')")}
+      ${chip(fuPeriod==='week','آخر 7 أيام',"setFuPeriod('week')")}
+      ${chip(fuPeriod==='month','آخر 30 يوم',"setFuPeriod('month')")}
+      ${chip(fuPeriod==='all','الكل',"setFuPeriod('all')")}
+    </div>
+    <div class="fu-chip-row" style="margin-top:0;">
+      ${chip(fuStatus==='all','كل الحالات',"setFuStatus('all')")}
+      ${chip(fuStatus==='حضر','✅ حضر',"setFuStatus('حضر')")}
+      ${chip(fuStatus==='غاب','❌ غاب',"setFuStatus('غاب')")}
+      ${chip(fuStatus==='تأجيل','⏸ اتأجلت',"setFuStatus('تأجيل')")}
+      ${chip(fuStatus==='note','📝 ملاحظات فقط',"setFuStatus('note')")}
+    </div>
+    <div id="fuListWrap">${fuListInner()}</div>
+  `;
+}
+// ============ نهاية متابعات الحضور ============
+
 
 let srSearchQuery = '';
 function srPaymentColor(status){
@@ -1003,6 +1162,8 @@ function studentRecordCard(r){
   const svcCol = srServiceColor(r.serviceType);
   return `<div class="sr-card">
     ${isOwner()?`<button class="corner-del" title="حذف" onclick="event.stopPropagation();deleteRecord('student_records','${r.id}','${jsAttr(r.studentName)}')">${ICON.trash}</button>`:''}
+    <!-- === تعديل: شارة اسم المشرفة التي أضافت الطالب (للمالك فقط) === -->
+    ${isOwner()?`<div><span class="sr-owner-badge ${r.supervisorId?'':'none'}">${r.supervisorId?`👤 أضافته: ${esc(supervisorLabel(r.supervisorId))}`:'👤 بدون مشرفة (سجل قديم)'}</span></div>`:''}
     <div class="sr-head" onclick="openStudentRecordModal('${r.id}')" style="cursor:pointer;">
       <div>
         <div class="sr-name">${esc(r.studentName)||'—'}</div>
@@ -1010,6 +1171,7 @@ function studentRecordCard(r){
         ${r.studentPhone?`<div class="sr-phone">📱 ${esc(r.studentPhone)}</div>`:''}
       </div>
       <div style="display:flex;gap:6px;">
+        ${r.groupLink?`<button class="icon-circle" style="background:#f3e8ff;color:#7e22ce;" title="جروب الواتساب" onclick="event.stopPropagation();openGroupLink('${jsAttr(r.groupLink)}')">${ICON.wa}</button>`:''}
         ${r.teacherPhone?`<button class="icon-circle" style="background:#eef2ff;color:#4f46e5;" title="واتساب المعلمة" onclick="event.stopPropagation();window.open('${waLink(r.teacherPhone)}','_blank')">${ICON.wa}</button>`:''}
         ${r.studentPhone?`<button class="icon-circle" style="background:#dcfce7;color:#15803d;" title="واتساب الطالب" onclick="event.stopPropagation();window.open('${waLink(r.studentPhone)}','_blank')">${ICON.wa}</button>`:''}
       </div>
@@ -1030,7 +1192,7 @@ function studentRecordCard(r){
 }
 function openStudentRecordModal(id){
   const r = id ? DATA.student_records.find(x=>x.id===id) : null;
-  const v = r || { studentName:'', studentPhone:'', teacherName:'', teacherPhone:'', subject:'', serviceType:'', subscriptionCycle:'', sessionCount:'', sessionDuration:'', slots:[] }; // === تعديل: حذف الحقول المالية + إضافة slots ===
+  const v = r || { studentName:'', studentPhone:'', teacherName:'', teacherPhone:'', subject:'', serviceType:'', subscriptionCycle:'', sessionCount:'', sessionDuration:'', slots:[], groupLink:'' }; // === تعديل: حذف الحقول المالية + إضافة slots + رابط الجروب ===
   selectedSrTeacherId = '';
   if(v.teacherName){
     const matched = DATA.teachers.find(t=>!t.archived && t.name.trim()===v.teacherName.trim());
@@ -1054,6 +1216,8 @@ function openStudentRecordModal(id){
       <div class="field"><label>المادة</label><input id="f_srSubject" value="${esc(v.subject)}" placeholder="المادة / الخدمة"></div>
     </div>
     <div class="field"><label>واتساب المعلمة (تلقائي)</label><input id="f_srTeacherPhone" value="${esc(v.teacherPhone)}" placeholder="هيتملى لوحده لما تختار المعلمة" readonly style="background:#f8fafc;color:var(--text-dim);"></div>
+    <!-- === تعديل: حقل رابط جروب الواتساب (معلمة + طالب + ولي أمر) === -->
+    <div class="field"><label>رابط جروب الواتساب</label><input id="f_srGroupLink" value="${escAttr(v.groupLink)}" placeholder="https://chat.whatsapp.com/..." dir="ltr" style="text-align:left;"></div>
     <div class="row2">
       <div class="field"><label>نوع الخدمة</label><input id="f_srServiceType" value="${esc(v.serviceType)}" placeholder="منهج / تأسيس"></div>
       <div class="field"><label>دورة الاشتراك</label><input id="f_srCycle" value="${esc(v.subscriptionCycle)}" placeholder="الاشتراك الأول"></div>
@@ -1122,6 +1286,7 @@ async function saveStudentRecord(id){
     teacherName: document.getElementById('f_srTeacherName').value.trim(),
     teacherPhone: document.getElementById('f_srTeacherPhone').value.trim(),
     subject: document.getElementById('f_srSubject').value.trim(),
+    groupLink: document.getElementById('f_srGroupLink').value.trim(), // === تعديل: رابط الجروب ===
     serviceType: document.getElementById('f_srServiceType').value.trim(),
     subscriptionCycle: document.getElementById('f_srCycle').value.trim(),
     sessionCount: document.getElementById('f_srSessionCount').value.trim(),
@@ -1133,6 +1298,7 @@ async function saveStudentRecord(id){
       .filter(sl=>sl.time),
   };
   if(!rec.studentName){ showToast('اكتب اسم الطالب'); return; }
+  if(rec.groupLink && !/^https?:\/\//i.test(rec.groupLink)){ showToast('رابط الجروب لازم يبدأ بـ https://'); return; } // === تعديل: التأكد من شكل الرابط ===
 
   if(id){
     const { error } = await sb.from('student_records').update(studentRecordToDb(rec)).eq('id', id);
@@ -1432,9 +1598,10 @@ function renderDaySchedule(){
     });
     // === تعديل: الجدولة التلقائية - توليد بطاقات حصص من مواعيد "بيانات الطلاب" لهذا اليوم ===
     const recordItems = [];
+    const cardDate = dateForDayIdx(scheduleDay); // === تعديل: تاريخ اليوم المعروض في الجدول (لتسجيل المتابعة) ===
     DATA.student_records.filter(r => !r.archived && r.slots && r.slots.length).forEach(r => {
         r.slots.filter(sl => sl.day === day && sl.time).forEach(sl => {
-            recordItems.push({ t: sl.time, html: recordClassCard(r, sl) });
+            recordItems.push({ t: sl.time, html: recordClassCard(r, sl, cardDate) });
         });
     });
     // === تعديل: دمج بطاقات الحصص القديمة مع بطاقات بيانات الطلاب وترتيبها بالوقت ===
@@ -1448,7 +1615,7 @@ function renderDaySchedule(){
     `;
 }
 // === تعديل: دالة جديدة - بطاقة حصة مولّدة تلقائياً من سجل طالب (تُقرأ دائماً من البيانات المحفوظة) ===
-function recordClassCard(r, sl){
+function recordClassCard(r, sl, date){
   return `<div class="session-card">
     <div class="sc-header" onclick="openStudentRecordModal('${r.id}')">
       <div class="sc-time">${esc(formatTime12(sl.time))}</div>
@@ -1463,8 +1630,89 @@ function recordClassCard(r, sl){
     <div class="sc-wa-buttons">
       ${r.studentPhone?`<button class="wa-btn-sm wa-student-sm" onclick="window.open('${waLink(r.studentPhone)}','_blank')">${ICON.wa} الطالب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الطالب</button>`}
       ${r.teacherPhone?`<button class="wa-btn-sm wa-teacher-sm" onclick="window.open('${waLink(r.teacherPhone)}','_blank')">${ICON.wa} المعلمة</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} المعلمة</button>`}
+      <!-- === تعديل: الزر الثالث - جروب الواتساب === -->
+      ${r.groupLink?`<button class="wa-btn-sm wa-group-sm" onclick="openGroupLink('${jsAttr(r.groupLink)}')">${ICON.wa} الجروب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الجروب</button>`}
+    </div>
+    <!-- === تعديل: أزرار تسجيل حالة الحصة + الملاحظات === -->
+    ${followupBar(r, date, sl.time)}
+  </div>`;
+}
+// === تعديل: دوال جديدة - متابعة الحصص (حضر / غاب / تأجيل + ملاحظة) ===
+function localDateStr(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function dateForDayIdx(idx){ const d=new Date(); d.setDate(d.getDate() + (idx - todayArIdx())); return localDateStr(d); }
+function followupKey(recordId, date, time){ return recordId+'_'+date+'_'+String(time).replace(/[^0-9]/g,''); }
+function findFollowup(recordId, date, time){ return DATA.followups.find(f=>f.recordId===recordId && f.date===date && f.slotTime===time); }
+const pendingFuNotes = {};
+function followupBar(r, date, time){
+  const key = followupKey(r.id, date, time);
+  const fu = findFollowup(r.id, date, time);
+  const noteVal = (pendingFuNotes[key] !== undefined) ? pendingFuNotes[key] : (fu ? (fu.note||'') : '');
+  const btn = (status, label, activeBg, activeC, idleBg) => {
+    const active = fu && fu.status===status;
+    return `<button class="fu-btn" style="background:${active?activeBg:idleBg};color:${active?'#fff':activeC};" onclick="event.stopPropagation();setFollowupStatus('${r.id}','${date}','${time}','${status}')">${label}</button>`;
+  };
+  const isToday = date===localDateStr(new Date());
+  return `<div class="fu-bar" onclick="event.stopPropagation()">
+    <div class="fu-date">📅 ${date}${isToday?' (اليوم)':''}${fu&&fu.status?' • المسجّل: '+esc(fu.status):''}</div>
+    <div class="fu-status-row">
+      ${btn('حضر','✅ حضر','#15803d','#15803d','#dcfce7')}
+      ${btn('غاب','❌ غاب','#b91c1c','#b91c1c','#fee2e2')}
+      ${btn('تأجيل','⏸ اتأجلت','#b45309','#b45309','#fef3c7')}
+    </div>
+    <div class="fu-note-row">
+      <input id="fu_note_${key}" value="${escAttr(noteVal)}" placeholder="📝 ملاحظاتك عن الحصة..." oninput="pendingFuNotes['${key}']=this.value">
+      <button class="fu-send" onclick="sendFollowupNote('${r.id}','${date}','${time}')">إرسال 📤</button>
     </div>
   </div>`;
+}
+// حفظ أو تعديل متابعة (سطر واحد لكل طالب + يوم + موعد)
+async function upsertFollowup(r, date, time, patch){
+  const existing = findFollowup(r.id, date, time);
+  if(existing){
+    const upd = {};
+    if('status' in patch) upd.status = patch.status || null;
+    if('note' in patch) upd.note = patch.note || null;
+    const { error } = await sb.from('class_followups').update(upd).eq('id', existing.id);
+    if(error){ console.error('class_followups update:', error); showToast('تعذر الحفظ: ' + error.message); return false; }
+    if('status' in patch) existing.status = patch.status || '';
+    if('note' in patch) existing.note = patch.note || '';
+    return true;
+  }
+  const uidNow = await getCurrentUserId();
+  const row = {
+    id: uid(), student_record_id: r.id, supervisor_id: r.supervisorId || uidNow || null,
+    attend_date: date, slot_time: time, status: patch.status || null, note: patch.note || null,
+    student_name: r.studentName || null, teacher_name: r.teacherName || null, subject: r.subject || null
+  };
+  const { error } = await sb.from('class_followups').insert(row);
+  if(error){ console.error('class_followups insert:', error); showToast('تعذر الحفظ: ' + error.message); return false; }
+  if(!DATA.followups.find(f=>f.id===row.id)) DATA.followups.unshift(mapFollowup({...row, created_at:new Date().toISOString()}));
+  return true;
+}
+async function setFollowupStatus(recordId, date, time, status){
+  const r = DATA.student_records.find(x=>x.id===recordId); if(!r) return;
+  const key = followupKey(recordId, date, time);
+  const input = document.getElementById('fu_note_'+key);
+  const patch = { status };
+  if(input) patch.note = input.value.trim();
+  else if(pendingFuNotes[key] !== undefined) patch.note = pendingFuNotes[key].trim();
+  const ok = await upsertFollowup(r, date, time, patch);
+  if(!ok) return;
+  delete pendingFuNotes[key];
+  render();
+  showToast('تم تسجيل الحصة: ' + status);
+}
+async function sendFollowupNote(recordId, date, time){
+  const r = DATA.student_records.find(x=>x.id===recordId); if(!r) return;
+  const key = followupKey(recordId, date, time);
+  const input = document.getElementById('fu_note_'+key);
+  const note = (input ? input.value : (pendingFuNotes[key]||'')).trim();
+  if(!note){ showToast('اكتب الملاحظة الأول'); return; }
+  const ok = await upsertFollowup(r, date, time, { note });
+  if(!ok) return;
+  delete pendingFuNotes[key];
+  render();
+  showToast('📤 تم إرسال الملاحظة لمتابعات الحضور');
 }
 function sessionCard(s){
   const student = DATA.students.find(x=>x.id===s.studentId);
