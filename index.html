@@ -154,6 +154,22 @@ input,select,textarea{font-family:inherit;}
 .sr-phone{font-size:11px;color:var(--text-dim);margin-top:2px;direction:ltr;text-align:right;}
 .sr-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
 .sr-chip{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+/* === تعديل: شريط أيام الجدول (تصميم جديد) === */
+.day-strip{display:flex;gap:10px;overflow-x:auto;padding:10px 4px 14px;margin:0 -4px 4px;scrollbar-width:none;scroll-snap-type:x proximity;}
+.day-strip::-webkit-scrollbar{display:none;}
+.day-pill{position:relative;flex:0 0 auto;scroll-snap-align:center;min-width:74px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 12px 9px;border-radius:18px;border:1.5px solid #e8eef3;background:#fff;color:var(--text-dim);cursor:pointer;box-shadow:0 1px 4px rgba(15,23,42,.05);transition:transform .18s,box-shadow .18s,background .18s,border-color .18s,color .18s;}
+.day-pill:active{transform:scale(.94);}
+.dp-emoji{font-size:20px;line-height:1;filter:grayscale(.3);transition:filter .18s,transform .18s;}
+.dp-name{font-size:12.5px;font-weight:800;}
+.dp-tag{font-size:9.5px;font-weight:700;opacity:.75;white-space:nowrap;min-height:12px;}
+.day-pill.today{border-color:var(--teal);background:#f0fdfa;color:var(--teal-dark);}
+.day-pill.today .dp-tag{opacity:1;color:#d97706;}
+.day-pill.active{background:linear-gradient(135deg,#2dd4bf,#0d9488);border-color:transparent;color:#fff;box-shadow:0 6px 16px rgba(13,148,136,.38);transform:translateY(-2px);}
+.day-pill.active .dp-emoji{filter:none;transform:scale(1.15);}
+.day-pill.active .dp-tag{color:#fff;opacity:.95;}
+.day-pill.active::after{content:'';position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:#0d9488;}
+.day-anim{animation:dayFade .28s ease;}
+@keyframes dayFade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
 /* === تعديل: شارة المشرفة (تظهر للمالك فقط) === */
 .sr-owner-badge{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;padding:4px 12px;border-radius:20px;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;border:1px solid #fcd34d;margin-bottom:10px;}
 .sr-owner-badge.none{background:#f1f5f9;color:#64748b;border-color:var(--line);}
@@ -573,7 +589,7 @@ async function loadData(){
       sb.from('attendance_log').select('*').order('attend_date', {ascending:false}),
       folQuery // === تعديل: استعلام متابعات الحضور ===
     ]);
-    if(stu.error) return;
+    if(stu.error){ showToast("تعذر تحميل البيانات"); setCloudStatus('error'); return; } // === تعديل: إظهار رسالة بدل الصمت عند فشل التحميل ===
     DATA.students = (stu.data||[]).map(mapStudent);
     DATA.teachers = (tea.data||[]).map(mapTeacher);
     DATA.sessions = (ses.data||[]).map(mapSession);
@@ -636,7 +652,7 @@ function syncEntity(type, mapper, payload){
 
 function showToast(msg){
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),3000);
+  setTimeout(()=>t.classList.remove('show'), String(msg).length > 45 ? 6500 : 3000); // === تعديل: الرسائل الطويلة (أسباب الأخطاء) تبقى وقتًا أطول ===
 }
 
 const COUNTRY_DIAL_MAP = {
@@ -646,9 +662,40 @@ const COUNTRY_DIAL_MAP = {
   'المغرب':'212','اليمن':'967','فلسطين':'970'
 };
 
+// === تعديل: دوال جديدة - تنظيف أرقام الهواتف (مسافات، فواصل، أقواس، أرقام عربية) ===
+function toLatinDigits(str){
+  return String(str==null?'':str)
+    .replace(/[\u0660-\u0669]/g, d=>String.fromCharCode(48 + d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, d=>String.fromCharCode(48 + d.charCodeAt(0) - 0x06F0));
+}
+// لو الحقل فيه أكثر من رقم (مفصولين بـ / أو , أو ؛) نفصلهم عشان لا يتدمجوا في رقم واحد خاطئ
+function phoneChunks(raw){
+  return toLatinDigits(raw).split(/[\/\\|،,;؛\n]+/).filter(c=>c.replace(/\D/g,'').length >= 7);
+}
+function cleanPhone(raw){
+  const src = toLatinDigits(raw).trim();
+  if(!src) return '';
+  const chunks = phoneChunks(src);
+  if(chunks.length > 1) return src; // أكثر من رقم: نتركه كما هو حتى لا تضيع بيانات
+  const one = chunks.length ? chunks[0] : src;
+  const plus = /^[\s(\[]*\+/.test(one);
+  const digits = one.replace(/\D/g,'');
+  return digits ? (plus ? '+' + digits : digits) : src;
+}
+// تنظيف الحقل تلقائيًا عند اللصق أو عند الخروج منه
+const PHONE_INPUT_IDS = ['f_phone','f_srPhone','f_trPhone','f_tphone','f_sStudentPhone'];
+function autoCleanPhoneInput(el){
+  if(!el || !PHONE_INPUT_IDS.includes(el.id)) return;
+  const cleaned = cleanPhone(el.value);
+  if(cleaned !== el.value){ el.value = cleaned; el.dispatchEvent(new Event('input', {bubbles:true})); }
+}
+document.addEventListener('paste', e=>{ const el = e.target; setTimeout(()=>autoCleanPhoneInput(el), 0); });
+document.addEventListener('focusout', e=>autoCleanPhoneInput(e.target));
+
 function waLink(phone, message, country){
   if(!phone) return "#";
-  let p = phone.trim().replace(/[^\d+]/g,'');
+  // === تعديل: تنظيف الرقم (وأخذ أول رقم لو فيه أكثر من رقم) قبل بناء الرابط ===
+  let p = cleanPhone(phoneChunks(phone)[0] || phone).replace(/[^\d+]/g,'');
   const hasPlus = p.startsWith('+');
   if(hasPlus) p = p.slice(1);
   else if(p.startsWith('00')) p = p.slice(2);
@@ -745,7 +792,7 @@ function render(){
   else if(ROUTE==='followups') m.innerHTML = pageFollowups(); // === تعديل: تبويب متابعات الحضور ===
   else if(ROUTE==='students') m.innerHTML = pageStudents();
   else if(ROUTE==='teachers') m.innerHTML = pageTeachers();
-  else if(ROUTE==='schedule_sessions') m.innerHTML = pageScheduleSessions();
+  else if(ROUTE==='schedule_sessions'){ m.innerHTML = pageScheduleSessions(); centerActiveDayPill(); } // === تعديل: توسيط اليوم النشط ===
   else if(ROUTE==='payments') m.innerHTML = pagePayments();
   else if(ROUTE==='reports') m.innerHTML = pageReports();
   else if(ROUTE==='settings'){ m.innerHTML = pageSettings(); refreshNotifStatus(); if(isOwner()) loadSupervisorsList(); }
@@ -886,7 +933,7 @@ async function saveStudent(id){
   const obj = {
     id: id || uid(),
     name: document.getElementById('f_name').value.trim() || 'بدون اسم',
-    phone: document.getElementById('f_phone').value.trim(),
+    phone: cleanPhone(document.getElementById('f_phone').value), // === تعديل: تنظيف الرقم ===
     country: document.getElementById('f_country').value.trim(),
     status: document.getElementById('f_status').value,
     payment: document.getElementById('f_payment').value,
@@ -963,6 +1010,18 @@ function fuBaseList(){
       (isOwner() && supervisorLabel(f.supervisorId).toLowerCase().includes(q));
   });
 }
+// === تعديل: دالة جديدة - عدد حصص اليوم المجدولة (مطابقة لما يظهر في شاشة الجدول) ===
+function fuScheduledTodayCount(){
+  const day = DAYS[todayArIdx()];
+  let n = 0;
+  DATA.student_records.forEach(r=>{
+    if(r.archived) return;
+    if(fuSupervisor!=='all' && r.supervisorId!==fuSupervisor) return;
+    n += (r.slots||[]).filter(sl=>sl.day===day && sl.time).length;
+  });
+  if(fuSupervisor==='all') n += DATA.sessions.filter(x=>!x.archived && x.slots && x.slots.some(sl=>sl.day===day)).length; // الحصص القديمة بدون مشرفة: مع "الكل" فقط
+  return n;
+}
 function setFuStatus(v){ fuStatus = v; render(); }
 function setFuSupervisor(v){ fuSupervisor = v; render(); }
 function renderFuList(){
@@ -980,28 +1039,38 @@ function fuDayLabel(dateStr, todayStr, yesterdayStr){
 }
 function fuListInner(){
   const base = fuBaseList();
-  const attended = base.filter(f=>f.status==='حضر').length;
-  const absent = base.filter(f=>f.status==='غاب').length;
-  const postponed = base.filter(f=>f.status==='تأجيل').length;
+  // === تعديل: إحصائيات اليوم الحالي فقط (تتأثر بفلتر المشرفة فقط) ===
+  const todayStr = localDateStr(new Date());
+  const todayList = fuAllEntries().filter(f=> f.date===todayStr && (fuSupervisor==='all' || f.supervisorId===fuSupervisor));
+  const attended = todayList.filter(f=>f.status==='حضر').length;
+  const absent = todayList.filter(f=>f.status==='غاب').length;
+  const postponed = todayList.filter(f=>f.status==='تأجيل').length;
+  const recordedToday = attended + absent + postponed;
+  const totalToday = Math.max(fuScheduledTodayCount(), recordedToday);
+  const pendingToday = totalToday - recordedToday;
   const decided = attended + absent;
   const rate = decided ? Math.round(attended*100/decided) : null;
   const list = base.filter(f=> fuStatus==='all' ? true : (fuStatus==='note' ? !f.status : f.status===fuStatus));
   const groups = {};
   list.forEach(f=>{ (groups[f.date] = groups[f.date] || []).push(f); });
-  const todayStr = localDateStr(new Date());
   const yd = new Date(); yd.setDate(yd.getDate()-1); const yesterdayStr = localDateStr(yd);
   const dates = Object.keys(groups);
   const past = dates.filter(d=>d<todayStr).sort((x,y)=>y.localeCompare(x));
   const future = dates.filter(d=>d>todayStr).sort((x,y)=>x.localeCompare(y));
   const order = [todayStr, ...past, ...future]; // اليوم الحالي دائمًا فوق، وبعده الأيام السابقة تسلسليًا
   const stats = `
-    <div class="stat-row" style="grid-template-columns:repeat(4,1fr);margin:10px 0;">
-      <div class="stat-card"><div class="num">${base.length}</div><div class="lbl">إجمالي المتابعات</div></div>
+    <div style="display:flex;align-items:center;gap:8px;margin:14px 0 2px;flex-wrap:wrap;">
+      <span style="font-size:12.5px;font-weight:800;color:var(--teal-dark);">📊 إحصائيات اليوم • ${esc(DAYS[todayArIdx()])}</span>
+      ${(isOwner() && fuSupervisor!=='all')?`<span class="sr-owner-badge" style="margin:0;">👤 ${esc(supervisorLabel(fuSupervisor))}</span>`:''}
+    </div>
+    <div class="stat-row" style="grid-template-columns:repeat(4,1fr);margin:8px 0;">
+      <div class="stat-card"><div class="num">${totalToday}</div><div class="lbl">حصص اليوم</div></div>
       <div class="stat-card"><div class="num" style="color:#15803d;">${attended}</div><div class="lbl">حضر</div></div>
       <div class="stat-card"><div class="num" style="color:#b91c1c;">${absent}</div><div class="lbl">غاب</div></div>
       <div class="stat-card"><div class="num" style="color:#b45309;">${postponed}</div><div class="lbl">اتأجلت</div></div>
     </div>
-    ${rate!==null?`<div class="fu-rate"><span>📈 نسبة الحضور (حضر ÷ حضر + غاب)</span><b>${rate}%</b></div>`:''}`;
+    ${pendingToday>0?`<div style="font-size:11px;color:var(--text-dim);margin:-2px 0 6px;">⏳ لم تُسجَّل بعد: ${pendingToday} حصة</div>`:''}
+    ${rate!==null?`<div class="fu-rate"><span>📈 نسبة حضور اليوم (حضر ÷ حضر + غاب)</span><b>${rate}%</b></div>`:''}`;
   const body = order.map(date=>{
     const items = (groups[date]||[]).slice().sort((a,b)=> (a.slotTime||'99:99').localeCompare(b.slotTime||'99:99'));
     if(!items.length && date!==todayStr) return '';
@@ -1256,7 +1325,25 @@ function pickSrTeacher(id, name, phone){
   document.getElementById('f_srTeacherPhone').value = phone || '';
   document.getElementById('srTeacherSuggestions').style.display='none';
 }
+// === تعديل: دالة جديدة - تحويل خطأ قاعدة البيانات لرسالة مفهومة (بدل "تعذر الحفظ" فقط) ===
+function dbErrorText(error){
+  if(!error) return '';
+  const msg = String(error.message||'');
+  if(error.code==='42501' || /row-level security|permission denied/i.test(msg)) return 'لا توجد صلاحية - شغّل ملف الـ SQL الجديد';
+  if(error.code==='PGRST204' || error.code==='42703' || /column .*(does not exist|schema cache)|schema cache/i.test(msg)) return 'عمود ناقص في قاعدة البيانات - شغّل ملف الـ SQL الجديد';
+  if(error.code==='23503') return 'معرّف المشرفة غير موجود';
+  return msg.slice(0,90) || ('رمز الخطأ ' + (error.code||''));
+}
+// === تعديل: غلاف جديد لمنع الضغط المزدوج على زر الحفظ (يمنع تكرار الطالب أو خطأ تعارض) ===
+let srSaving = false;
 async function saveStudentRecord(id){
+  if(srSaving) return;
+  srSaving = true;
+  try{ await saveStudentRecordCore(id); }
+  catch(e){ console.error('saveStudentRecord:', e); showToast('تعذر الحفظ: ' + (e && e.message ? String(e.message).slice(0,90) : 'خطأ غير متوقع')); }
+  finally{ srSaving = false; }
+}
+async function saveStudentRecordCore(id){
   const existing = id ? DATA.student_records.find(x=>x.id===id) : null;
   const base = existing || { archived:false };
   const currentUid = await getCurrentUserId(); // === تعديل: معرّف المستخدم الحالي ===
@@ -1265,9 +1352,9 @@ async function saveStudentRecord(id){
     id: id || uid(),
     supervisorId: base.supervisorId || currentUid || '', // === تعديل: الطالب الجديد يُسجَّل باسم من أضافه، والقديم يحتفظ بصاحبه ===
     studentName: document.getElementById('f_srStudentName').value.trim(),
-    studentPhone: document.getElementById('f_srPhone').value.trim(),
+    studentPhone: cleanPhone(document.getElementById('f_srPhone').value), // === تعديل: تنظيف الرقم ===
     teacherName: document.getElementById('f_srTeacherName').value.trim(),
-    teacherPhone: document.getElementById('f_srTeacherPhone').value.trim(),
+    teacherPhone: cleanPhone(document.getElementById('f_srTeacherPhone').value), // === تعديل: تنظيف الرقم ===
     subject: document.getElementById('f_srSubject').value.trim(),
     groupLink: document.getElementById('f_srGroupLink').value.trim(), // === تعديل: رابط الجروب ===
     serviceType: document.getElementById('f_srServiceType').value.trim(),
@@ -1289,12 +1376,12 @@ async function saveStudentRecord(id){
 
   if(id){
     const { error } = await sb.from('student_records').update(studentRecordToDb(rec)).eq('id', id);
-    if(error){ console.error('student_records update:', error); showToast(error.code==='42501' ? 'تعذر الحفظ: لا توجد صلاحية' : 'تعذر الحفظ'); return; } // === تعديل: تسجيل سبب الخطأ ===
+    if(error){ console.error('student_records update:', error); showToast('تعذر الحفظ: ' + dbErrorText(error)); return; } // === تعديل: تسجيل سبب الخطأ ===
     const idx = DATA.student_records.findIndex(x=>x.id===id);
     DATA.student_records[idx] = rec;
   } else {
     const { error } = await sb.from('student_records').insert(studentRecordToDb(rec));
-    if(error){ console.error('student_records insert:', error); showToast(error.code==='42501' ? 'تعذر الحفظ: لا توجد صلاحية' : 'تعذر الحفظ'); return; } // === تعديل: تسجيل سبب الخطأ ===
+    if(error){ console.error('student_records insert:', error); showToast('تعذر الحفظ: ' + dbErrorText(error)); return; } // === تعديل: تسجيل سبب الخطأ ===
     DATA.student_records.unshift(rec);
   }
   closeModal(); render(); showToast(id?'تم الحفظ':'✅ تم إضافة المشترك بنجاح');
@@ -1435,7 +1522,7 @@ async function saveTrial(id){
   const payload = {
     id: id || uid(),
     studentName: document.getElementById('f_trName').value.trim(),
-    phone: document.getElementById('f_trPhone').value.trim(),
+    phone: cleanPhone(document.getElementById('f_trPhone').value), // === تعديل: تنظيف الرقم ===
     subject: document.getElementById('f_trSubject').value.trim(),
     teacherName: (selectedTrialTeacherId ? (DATA.teachers.find(x=>x.id===selectedTrialTeacherId)||{}).name : document.getElementById('f_trTeacherSearch').value.trim()) || '',
     schedule: scheduleTxt,
@@ -1550,7 +1637,7 @@ async function saveTeacher(id){
   const obj = {
     id: id || uid(),
     name: document.getElementById('f_tname').value.trim() || 'بدون اسم',
-    phone: document.getElementById('f_tphone').value.trim(),
+    phone: cleanPhone(document.getElementById('f_tphone').value), // === تعديل: تنظيف الرقم ===
     salary: document.getElementById('f_tsalary').value.trim(),
     subjects: document.getElementById('f_tsubjects').value.trim(),
     meetLink: document.getElementById('f_tmeet').value.trim(),
@@ -1564,16 +1651,40 @@ async function saveTeacher(id){
 }
 
 function pageScheduleSessions(){
+  const anim = dayAnimNext; dayAnimNext = false; // === تعديل: حركة انتقال عند تغيير اليوم فقط ===
   return `
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <h1 class="page-title">الحصص والجدول</h1>
       <button class="icon-btn" style="background:var(--ink);color:#fff;" onclick="openSessionModal()">${ICON.plus} إضافة</button>
     </div>
-    <div class="day-tabs">
-      ${DAYS.map((d,i)=>`<button class="day-tab ${scheduleDay===i?'active':''} ${todayArIdx()===i?'today':''}" onclick="scheduleDay=${i};render()">${d}</button>`).join('')}
+    <!-- === تعديل: شريط أيام جديد (إيموجي + عدد الحصص + تمييز اليوم الحالي واليوم النشط) === -->
+    <div class="day-strip" id="dayStrip">
+      ${DAYS.map((d,i)=>{
+        const n = scheduleCountForDay(d);
+        const isToday = todayArIdx()===i;
+        const tag = isToday ? (n?`اليوم • ${n}`:'اليوم') : (n?`${n} حصة`:'—');
+        return `<button class="day-pill ${scheduleDay===i?'active':''} ${isToday?'today':''}" onclick="setScheduleDay(${i})"><span class="dp-emoji">${DAY_EMOJIS[i]}</span><span class="dp-name">${d}</span><span class="dp-tag">${tag}</span></button>`;
+      }).join('')}
     </div>
-    ${renderDaySchedule()}
+    <div class="${anim?'day-anim':''}">${renderDaySchedule()}</div>
   `;
+}
+// === تعديل: دوال جديدة لشريط الأيام ===
+const DAY_EMOJIS = ['🪐','☀️','🌙','🔥','💫','⚡','🕌']; // بنفس ترتيب DAYS: السبت ... الجمعة
+let dayAnimNext = false;
+function setScheduleDay(i){ scheduleDay = i; dayAnimNext = true; render(); }
+function scheduleCountForDay(dayName){
+  let n = DATA.sessions.filter(x=>!x.archived && x.slots && x.slots.some(sl=>sl.day===dayName)).length;
+  DATA.student_records.forEach(r=>{ if(!r.archived) n += (r.slots||[]).filter(sl=>sl.day===dayName && sl.time).length; });
+  return n;
+}
+// يحرّك الشريط أفقيًا فقط ليظهر اليوم النشط في المنتصف (بدون تحريك الصفحة رأسيًا)
+function centerActiveDayPill(){
+  const st = document.getElementById('dayStrip');
+  const el = st && st.querySelector('.day-pill.active');
+  if(!el) return;
+  const r = el.getBoundingClientRect(), sr = st.getBoundingClientRect();
+  st.scrollLeft += (r.left + r.width/2) - (sr.left + sr.width/2);
 }
 function renderDaySchedule(){
     const day = DAYS[scheduleDay];
@@ -1660,7 +1771,7 @@ async function upsertFollowup(r, date, time, patch){
     if('status' in patch) upd.status = patch.status || null;
     if('note' in patch) upd.note = patch.note || null;
     const { error } = await sb.from('class_followups').update(upd).eq('id', existing.id);
-    if(error){ console.error('class_followups update:', error); showToast('تعذر الحفظ: ' + error.message); return false; }
+    if(error){ console.error('class_followups update:', error); showToast('تعذر الحفظ: ' + dbErrorText(error)); return false; }
     if('status' in patch) existing.status = patch.status || '';
     if('note' in patch) existing.note = patch.note || '';
     return true;
@@ -1680,7 +1791,7 @@ async function upsertFollowup(r, date, time, patch){
         return upsertFollowup(r, date, time, patch);
       }
     }
-    console.error('class_followups insert:', error); showToast('تعذر الحفظ: ' + error.message); return false;
+    console.error('class_followups insert:', error); showToast('تعذر الحفظ: ' + dbErrorText(error)); return false;
   }
   if(!DATA.followups.find(f=>f.id===row.id)) DATA.followups.unshift(mapFollowup({...row, created_at:new Date().toISOString()}));
   return true;
@@ -1928,10 +2039,10 @@ function removeSubjectChip(i){
   document.getElementById('sessionSubjectsChips').innerHTML = renderSubjectChips();
 }
 function lookupTrialByPhone(phone){
-  const digits = (phone||'').replace(/\D/g,'');
+  const digits = toLatinDigits(phone||'').replace(/\D/g,''); // === تعديل: دعم الأرقام العربية ===
   const nameInput = document.getElementById('f_sStudent');
   if(!nameInput || digits.length < 6) return;
-  const match = DATA.trials.find(t=>!t.archived && t.phone && t.phone.replace(/\D/g,'').slice(-9) === digits.slice(-9));
+  const match = DATA.trials.find(t=>!t.archived && t.phone && toLatinDigits(t.phone).replace(/\D/g,'').slice(-9) === digits.slice(-9));
   if(match && match.studentName){
     nameInput.value = match.studentName;
     nameInput.style.color = '#94a3b8';
@@ -1961,7 +2072,7 @@ function addSlotRow(slot){
   div.innerHTML = `<select class="slotDay">${dayOpts}</select><input type="time" class="slotTime" value="${slot?slot.time||'':''}"><button type="button" style="background:#fff;color:var(--coral);border:1px solid #fee2e2;border-radius:6px;width:28px;height:28px;" onclick="document.getElementById('${id}').remove()">✕</button>`;
   document.getElementById('slotsContainer').appendChild(div);
 }
-function normalizePhoneDigits(p){ return (p||'').replace(/\D/g,'').replace(/^0+/,''); }
+function normalizePhoneDigits(p){ return toLatinDigits(p||'').replace(/\D/g,'').replace(/^0+/,''); } // === تعديل: دعم الأرقام العربية ===
 async function upsertStudentFromSession(name, phone){
   if(!name) return '';
   let existing = null;
@@ -1985,7 +2096,7 @@ async function saveSession(id){
     time: row.querySelector('.slotTime').value
   })).filter(sl=>sl.time);
   const studentNameVal = document.getElementById('f_sStudent').value.trim();
-  const studentPhoneVal = document.getElementById('f_sStudentPhone').value.trim();
+  const studentPhoneVal = cleanPhone(document.getElementById('f_sStudentPhone').value); // === تعديل: تنظيف الرقم ===
 
   // إضافة جديدة (بدون id) = تتسجل كحصة تجريبية ومتظهرش في الجدولة إلا بعد الاشتراك
   if(!id){
