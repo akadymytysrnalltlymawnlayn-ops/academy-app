@@ -479,6 +479,12 @@ async function initApp(){
     subscribeRealtime();
 }
 function isOwner(){ return !CURRENT_PROFILE || CURRENT_PROFILE.role === 'owner'; }
+// === تعديل: دالة جديدة - معرّف المستخدم الحالي (من الملف الشخصي، وإلا من الدخول مباشرة) ===
+async function getCurrentUserId(){
+  if(CURRENT_PROFILE && CURRENT_PROFILE.id) return CURRENT_PROFILE.id;
+  try{ const { data:{ user } } = await sb.auth.getUser(); return user ? user.id : null; }
+  catch(e){ return null; }
+}
 
 function setCloudStatus(state){
   const dot = document.getElementById('statusDot');
@@ -505,6 +511,7 @@ function mapStudentRecord(r){
     studentPaymentStatus:r.student_payment_status||'', studentPaymentDate:r.student_payment_date||'',
     teacherTransferStatus:r.teacher_transfer_status||'', teacherTransferDate:r.teacher_transfer_date||'',
     slots:r.slots||[], // === تعديل: مواعيد الحصص ===
+    supervisorId:r.supervisor_id||'', // === تعديل: معرّف المشرفة صاحبة الطالب ===
     archived:!!r.archived
   };
 }
@@ -516,6 +523,7 @@ function studentRecordToDb(r){
     student_payment_status:r.studentPaymentStatus||null, student_payment_date:r.studentPaymentDate||null,
     teacher_transfer_status:r.teacherTransferStatus||null, teacher_transfer_date:r.teacherTransferDate||null,
     slots:r.slots||[], // === تعديل: مواعيد الحصص ===
+    supervisor_id:r.supervisorId||null, // === تعديل: معرّف المشرفة (يُحدَّد عند الإضافة ولا يتغير عند التعديل) ===
     archived:!!r.archived
   };
 }
@@ -523,13 +531,16 @@ function trialToDb(t){ return {id:t.id, student_name:t.studentName||'', phone:t.
 
 async function loadData(){
   try{
+    // === تعديل: عزل البيانات - المشرفة ترى طلابها فقط، والمالك يرى الجميع ===
+    let srecQuery = sb.from('student_records').select('*').order('created_at');
+    if(CURRENT_PROFILE && CURRENT_PROFILE.role === 'supervisor') srecQuery = srecQuery.eq('supervisor_id', CURRENT_PROFILE.id);
     const [stu, tea, ses, subs, trl, srec, att] = await Promise.all([
       sb.from('students').select('*'),
       sb.from('teachers').select('*'),
       sb.from('sessions').select('*'),
       sb.from('subjects').select('*').order('created_at'),
       sb.from('trials').select('*').order('created_at', {ascending:false}),
-      sb.from('student_records').select('*').order('created_at'),
+      srecQuery, // === تعديل: كان هنا الاستعلام المباشر على student_records ===
       sb.from('attendance_log').select('*').order('attend_date', {ascending:false})
     ]);
     if(stu.error) return;
@@ -561,6 +572,8 @@ function syncEntity(type, mapper, payload){
     const idx = arr.findIndex(x=>x.id===payload.old.id);
     if(idx>-1) arr.splice(idx,1);
   } else {
+    // === تعديل: المشرفة لا تستقبل تحديثات طلاب غيرها ===
+    if(type==='student_records' && !isOwner() && payload.new.supervisor_id !== (CURRENT_PROFILE && CURRENT_PROFILE.id)) return;
     const row = mapper(payload.new);
     const idx = arr.findIndex(x=>x.id===row.id);
     if(idx>-1) arr[idx]=row; else arr.push(row);
@@ -1099,9 +1112,11 @@ function pickSrTeacher(id, name, phone){
 async function saveStudentRecord(id){
   const existing = id ? DATA.student_records.find(x=>x.id===id) : null;
   const base = existing || { archived:false };
+  const currentUid = await getCurrentUserId(); // === تعديل: معرّف المستخدم الحالي ===
   const rec = {
     ...base,
     id: id || uid(),
+    supervisorId: base.supervisorId || currentUid || '', // === تعديل: الطالب الجديد يُسجَّل باسم من أضافه، والقديم يحتفظ بصاحبه ===
     studentName: document.getElementById('f_srStudentName').value.trim(),
     studentPhone: document.getElementById('f_srPhone').value.trim(),
     teacherName: document.getElementById('f_srTeacherName').value.trim(),
@@ -1121,12 +1136,12 @@ async function saveStudentRecord(id){
 
   if(id){
     const { error } = await sb.from('student_records').update(studentRecordToDb(rec)).eq('id', id);
-    if(error){ showToast('تعذر الحفظ'); return; }
+    if(error){ console.error('student_records update:', error); showToast(error.code==='42501' ? 'تعذر الحفظ: لا توجد صلاحية' : 'تعذر الحفظ'); return; } // === تعديل: تسجيل سبب الخطأ ===
     const idx = DATA.student_records.findIndex(x=>x.id===id);
     DATA.student_records[idx] = rec;
   } else {
     const { error } = await sb.from('student_records').insert(studentRecordToDb(rec));
-    if(error){ showToast('تعذر الحفظ'); return; }
+    if(error){ console.error('student_records insert:', error); showToast(error.code==='42501' ? 'تعذر الحفظ: لا توجد صلاحية' : 'تعذر الحفظ'); return; } // === تعديل: تسجيل سبب الخطأ ===
     DATA.student_records.unshift(rec);
   }
   closeModal(); render(); showToast(id?'تم الحفظ':'✅ تم إضافة المشترك بنجاح');
