@@ -477,11 +477,11 @@ let scheduleDay = todayArIdx();
 function uid(){ return crypto.randomUUID(); }
 // === تعديل: دالة جديدة - تنظيف النص داخل خصائص الـ HTML (تشمل علامات التنصيص) ===
 function escAttr(str){ return esc(str).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function esc(str){ const d=document.createElement('div'); d.textContent=str==null?'':String(str); return d.innerHTML; }
-function jsAttr(str){ return String(str==null?'':str).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/[\r\n]/g,' '); }
+function esc(str){ const d=document.createElement('div'); d.textContent=str==null?'':String(str); return d.innerHTML.replace(/"/g,'&quot;').replace(/'/g,'&#39;'); } // === تعديل: حماية علامات التنصيص داخل خصائص الـ HTML ===
+function jsAttr(str){ return String(str==null?'':str).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/[\r\n]/g,' ').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); } // === تعديل: حماية النص داخل أزرار onclick من كسر الخاصية ===
 
 let CURRENT_PROFILE = null;
-const SUPERVISOR_ALLOWED_ROUTES = ['schedule_sessions','attendance','student_records','followups']; // === تعديل: إضافة تبويب متابعات الحضور للمشرفات ===
+const SUPERVISOR_ALLOWED_ROUTES = ['schedule_sessions','student_records','followups']; // === تعديل: حذف تبويب متابعة الحضور القديم، والاعتماد على تبويب المتابعة الجديد ===
 async function fetchProfile(){
   try{
     const { data:{ user } } = await sb.auth.getUser();
@@ -666,10 +666,8 @@ function waLink(phone, message, country){
   }
 
   // فحص أخير: أرقام واتساب الحقيقية بين 8 و15 رقم (معيار دولي E.164). لو الرقم برة النطاق ده، غالبًا فيه خطأ إدخال
-  if(p.length < 8 || p.length > 15){
-    showToast(`⚠️ الرقم "${phone}" يبدو غير مكتمل أو فيه خطأ - راجعه في بيانات صاحبه`);
-    return "#";
-  }
+  // === تعديل: تم حذف رسالة التنبيه من هنا (كانت تظهر مع كل إعادة رسم للصفحة)، والتنبيه صار داخل waOpen عند الضغط فقط ===
+  if(p.length < 8 || p.length > 15) return "#";
 
   return message ? `https://wa.me/${p}?text=${encodeURIComponent(message)}` : `https://wa.me/${p}`;
 }
@@ -689,10 +687,24 @@ function sessionSlotText(s){
 function groupReminderMsg(){
   return `🔔 تذكير بسيط ❤️\n\nنحب نفكّركم بموعد الحصة اليوم⏰📚\nنتمنى التواجد في الموعد المحدد 🌷✨\n\nبالتوفيق دائمًا 💛`;
 }
+// === تعديل: دالة جديدة - فتح واتساب عند الضغط (تتأكد من الرقم قبل الفتح، ولا تفتح صفحة فارغة عند الخطأ) ===
+function waOpen(phone, country){
+  const url = waLink(phone, null, country || '');
+  if(url === '#'){ showToast(`⚠️ الرقم "${phone}" يبدو غير مكتمل أو فيه خطأ - راجعه في بيانات صاحبه`); return; }
+  window.open(url, '_blank');
+}
+// === تعديل: دالة جديدة - تنظيف رابط الجروب (تضيف https:// لو ناقصة، وترفض أي رابط غير آمن) ===
+function normalizeGroupLink(link){
+  let l = String(link||'').trim().replace(/\s+/g,'');
+  if(!l) return '';
+  if(/^(chat\.whatsapp\.com|wa\.me|whatsapp\.com)\//i.test(l)) l = 'https://' + l;
+  return /^https?:\/\/[^\s]+$/i.test(l) ? l : null;
+}
 function openGroupLink(link){
-  if(!link) return;
-  const sep = link.includes('?') ? '&' : '?';
-  window.open(`${link}${sep}text=${encodeURIComponent(groupReminderMsg())}`,'_blank');
+  const clean = normalizeGroupLink(link); // === تعديل: التأكد من صحة الرابط قبل الفتح ===
+  if(!clean){ showToast('⚠️ رابط الجروب غير صحيح - راجعه'); return; }
+  const sep = clean.includes('?') ? '&' : '?';
+  window.open(`${clean}${sep}text=${encodeURIComponent(groupReminderMsg())}`,'_blank');
 }
 
 const NAV_ITEMS = [
@@ -701,8 +713,8 @@ const NAV_ITEMS = [
   {id:'students', label:'الطلاب', emoji:'🎓', icon:ICON.students},
   {id:'student_records', label:'بيانات الطلاب', emoji:'📑', icon:ICON.students},
   {id:'schedule_sessions', label:'الجدول', emoji:'🗓️', icon:ICON.schedule},
-  {id:'attendance', label:'متابعة الحضور', emoji:'✅', icon:ICON.schedule},
-  {id:'followups', label:'متابعات الحضور', emoji:'📋', icon:ICON.schedule}, // === تعديل: تبويب جديد ===
+  // === تعديل: تم حذف تبويب (متابعة الحضور) القديم نهائيًا ===
+  {id:'followups', label:'متابعة الحضور', emoji:'✅', icon:ICON.schedule}, // === تعديل: التبويب الجديد المطوّر (يحمل اسم متابعة الحضور) ===
   {id:'teachers', label:'المعلمين', emoji:'👩‍🏫', icon:ICON.teachers},
   {id:'payments', label:'المدفوعات', emoji:'💳', icon:ICON.payments},
   {id:'reports', label:'التقارير', emoji:'📊', icon:ICON.reports},
@@ -729,7 +741,7 @@ function render(){
   if(ROUTE==='dashboard') m.innerHTML = pageDashboard();
   else if(ROUTE==='trials') m.innerHTML = pageTrials();
   else if(ROUTE==='student_records') m.innerHTML = pageStudentRecords();
-  else if(ROUTE==='attendance') m.innerHTML = pageAttendance();
+  // === تعديل: تم حذف مسار الصفحة القديمة (attendance) ===
   else if(ROUTE==='followups') m.innerHTML = pageFollowups(); // === تعديل: تبويب متابعات الحضور ===
   else if(ROUTE==='students') m.innerHTML = pageStudents();
   else if(ROUTE==='teachers') m.innerHTML = pageTeachers();
@@ -832,7 +844,7 @@ function studentCard(s){
     <button class="corner-del" title="حذف" onclick="event.stopPropagation();deleteRecord('students','${s.id}','${jsAttr(s.name)}')">${ICON.trash}</button>
     ${teacherNames? `<div class="tag">👤 ${teacherNames}</div>`:''}
     <div class="p-actions">
-      <button class="icon-circle" style="background:#dcfce7;color:#15803d;" title="واتساب" onclick="window.open('${waLink(s.phone, null, s.country)}','_blank')">${ICON.wa}</button>
+      <button class="icon-circle" style="background:#dcfce7;color:#15803d;" title="واتساب" onclick="waOpen('${jsAttr(s.phone)}','${jsAttr(s.country)}')">${ICON.wa}</button>
       <button class="icon-circle" style="background:#e0f2fe;color:#0369a1;" title="تعديل" onclick="openStudentModal('${s.id}')">${ICON.edit}</button>
       <button class="icon-circle" style="background:#fef3c7;color:#b45309;" title="أرشفة" onclick="toggleArchive('students','${s.id}')">${ICON.archive}</button>
     </div>
@@ -905,7 +917,7 @@ function pageTeachers(){
 
 // ============ الحصص التجريبية ============
 // ============ متابعة الحضور ============
-let attSearchQuery = '';
+// === تعديل: تم حذف attSearchQuery (كان خاصًا بالصفحة القديمة) ===
 function attStatusColor(status){
   if(status==='حضر') return {bg:'#dcfce7',c:'#15803d'};
   if(status==='غاب') return {bg:'#fee2e2',c:'#b91c1c'};
@@ -923,163 +935,134 @@ function attendanceRowInfo(a){
     subject: (s.subjects||[]).join('، ')
   };
 }
-function pageAttendance(){
-  const q = attSearchQuery.trim().toLowerCase();
-  const enriched = DATA.attendance.map(a=>({...a, ...attendanceRowInfo(a)}));
-  const filtered = enriched.filter(a=> !q ||
-    a.studentName.toLowerCase().includes(q) ||
-    a.teacherName.toLowerCase().includes(q) ||
-    (a.subject||'').toLowerCase().includes(q) ||
-    (a.note||'').toLowerCase().includes(q)
-  );
-
-  // تجميع حسب التاريخ (الأحدث فوق)
-  const groups = {};
-  filtered.forEach(a=>{ (groups[a.date] = groups[a.date] || []).push(a); });
-  const sortedDates = Object.keys(groups).sort((x,y)=> y.localeCompare(x));
-
-  const dayLabel = (dateStr)=>{
-    const d = new Date(dateStr+'T00:00:00');
-    if(isNaN(d)) return dateStr;
-    return d.toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-  };
-
-  const bodyHtml = sortedDates.length ? sortedDates.map(date=>{
-    const dayItems = groups[date];
-    const total = dayItems.length;
-    const attended = dayItems.filter(a=>a.status==='حضر').length;
-    const absent = dayItems.filter(a=>a.status==='غاب').length;
-    const postponed = dayItems.filter(a=>a.status==='تأجيل').length;
-    return `
-      <div style="display:flex;align-items:center;gap:10px;margin:18px 0 10px;">
-        <span style="font-size:12.5px;font-weight:800;color:var(--teal-dark);white-space:nowrap;">📅 ${dayLabel(date)}</span>
-        <span style="flex:1;height:1px;background:linear-gradient(to left,var(--line),transparent);"></span>
-      </div>
-      <div class="stat-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:10px;">
-        <div class="stat-card"><div class="num">${total}</div><div class="lbl">إجمالي الحصص</div></div>
-        <div class="stat-card"><div class="num" style="color:#15803d;">${attended}</div><div class="lbl">حضر</div></div>
-        <div class="stat-card"><div class="num" style="color:#b91c1c;">${absent}</div><div class="lbl">غاب</div></div>
-        <div class="stat-card"><div class="num" style="color:#b45309;">${postponed}</div><div class="lbl">تأجيل</div></div>
-      </div>
-      <div class="list">
-        ${dayItems.map(a=>{
-          const col = attStatusColor(a.status);
-          return `<div class="p-card">
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-              <div>
-                <div class="p-name">${esc(a.studentName)}</div>
-                <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">👩‍🏫 ${esc(a.teacherName)} ${a.subject?'• '+esc(a.subject):''}</div>
-                ${a.note?`<div style="font-size:11.5px;color:#475569;background:#f8fafc;border-radius:8px;padding:5px 8px;margin-top:6px;">📝 ${esc(a.note)}</div>`:''}
-              </div>
-              <span class="badge" style="background:${col.bg};color:${col.c};font-size:11px;padding:4px 10px;">${esc(a.status)}</span>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    `;
-  }).join('') : `<div class="empty">${ICON.empty}<div>لا يوجد سجل حضور بعد</div></div>`;
-
-  return `
-    <h1 class="page-title">✅ متابعة الحضور</h1>
-    <div class="sr-toolbar" style="margin-top:12px;">
-      <input class="sr-search" placeholder="🔍 دوّر باسم الطالب أو المعلمة أو المادة..." value="${esc(attSearchQuery)}" oninput="attSearchQuery=this.value; render();">
-    </div>
-    ${bodyHtml}
-  `;
-}
+// === تعديل: تم حذف دالة pageAttendance (الصفحة القديمة) ===
 // ============ نهاية متابعة الحضور ============
-// ============ متابعات الحضور (تبويب جديد) ============
-let fuSearch = '', fuPeriod = 'week', fuStatus = 'all';
-function fuFiltered(){
+// ============ متابعة الحضور (التبويب الجديد) ============
+let fuSearch = '', fuStatus = 'all', fuSupervisor = 'all';
+// كل المتابعات: الجديدة + سجل الحضور القديم (من حصص الجدول القديمة) عشان ما يضيعش أي سجل بعد حذف التبويب القديم
+function fuAllEntries(){
+  const legacy = DATA.attendance.map(a=>{
+    const info = attendanceRowInfo(a);
+    return {id:'att_'+a.id, recordId:'', supervisorId:'', date:a.date, slotTime:'', status:a.status||'', note:a.note||'', studentName:info.studentName, teacherName:info.teacherName, subject:info.subject, legacy:true};
+  });
+  return DATA.followups.concat(legacy);
+}
+function fuSupervisorIds(entries){
+  const ids = new Set(Object.keys(SUPERVISOR_NAMES));
+  entries.forEach(f=>{ if(f.supervisorId) ids.add(f.supervisorId); });
+  return [...ids];
+}
+// القائمة بعد فلتر المشرفة والبحث (تُحسب منها الإحصائيات)
+function fuBaseList(){
   const q = fuSearch.trim().toLowerCase();
-  let minDate = '';
-  if(fuPeriod==='today') minDate = localDateStr(new Date());
-  else if(fuPeriod==='week'){ const d=new Date(); d.setDate(d.getDate()-6); minDate = localDateStr(d); }
-  else if(fuPeriod==='month'){ const d=new Date(); d.setDate(d.getDate()-29); minDate = localDateStr(d); }
-  return DATA.followups.filter(f=>{
-    if(minDate && f.date < minDate) return false;
-    if(fuStatus==='note'){ if(f.status) return false; }
-    else if(fuStatus!=='all' && f.status!==fuStatus) return false;
+  return fuAllEntries().filter(f=>{
+    if(fuSupervisor!=='all' && f.supervisorId!==fuSupervisor) return false; // سجلات الجدول القديم بدون مشرفة تظهر مع "الكل" فقط
     if(!q) return true;
     return (f.studentName||'').toLowerCase().includes(q) || (f.teacherName||'').toLowerCase().includes(q) ||
       (f.subject||'').toLowerCase().includes(q) || (f.note||'').toLowerCase().includes(q) ||
       (isOwner() && supervisorLabel(f.supervisorId).toLowerCase().includes(q));
   });
 }
-function setFuPeriod(v){ fuPeriod = v; render(); }
 function setFuStatus(v){ fuStatus = v; render(); }
+function setFuSupervisor(v){ fuSupervisor = v; render(); }
 function renderFuList(){
   const wrap = document.getElementById('fuListWrap');
   if(wrap) wrap.innerHTML = fuListInner();
 }
+function fuDayLabel(dateStr, todayStr, yesterdayStr){
+  const d = new Date(dateStr+'T00:00:00');
+  if(isNaN(d)) return dateStr;
+  const wk = d.toLocaleDateString('ar-EG', { weekday:'long' });
+  if(dateStr===todayStr) return 'اليوم ' + wk;
+  if(dateStr===yesterdayStr) return 'أمس ' + wk;
+  if(dateStr>todayStr) return 'قادم • ' + wk;
+  return wk;
+}
 function fuListInner(){
-  const list = fuFiltered();
-  const attended = list.filter(f=>f.status==='حضر').length;
-  const absent = list.filter(f=>f.status==='غاب').length;
-  const postponed = list.filter(f=>f.status==='تأجيل').length;
+  const base = fuBaseList();
+  const attended = base.filter(f=>f.status==='حضر').length;
+  const absent = base.filter(f=>f.status==='غاب').length;
+  const postponed = base.filter(f=>f.status==='تأجيل').length;
   const decided = attended + absent;
   const rate = decided ? Math.round(attended*100/decided) : null;
+  const list = base.filter(f=> fuStatus==='all' ? true : (fuStatus==='note' ? !f.status : f.status===fuStatus));
   const groups = {};
   list.forEach(f=>{ (groups[f.date] = groups[f.date] || []).push(f); });
-  const dates = Object.keys(groups).sort((x,y)=> y.localeCompare(x));
-  const dayLabel = (dateStr)=>{
-    const d = new Date(dateStr+'T00:00:00');
-    if(isNaN(d)) return dateStr;
-    return d.toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long' });
-  };
+  const todayStr = localDateStr(new Date());
+  const yd = new Date(); yd.setDate(yd.getDate()-1); const yesterdayStr = localDateStr(yd);
+  const dates = Object.keys(groups);
+  const past = dates.filter(d=>d<todayStr).sort((x,y)=>y.localeCompare(x));
+  const future = dates.filter(d=>d>todayStr).sort((x,y)=>x.localeCompare(y));
+  const order = [todayStr, ...past, ...future]; // اليوم الحالي دائمًا فوق، وبعده الأيام السابقة تسلسليًا
   const stats = `
     <div class="stat-row" style="grid-template-columns:repeat(4,1fr);margin:10px 0;">
-      <div class="stat-card"><div class="num">${list.length}</div><div class="lbl">إجمالي المتابعات</div></div>
+      <div class="stat-card"><div class="num">${base.length}</div><div class="lbl">إجمالي المتابعات</div></div>
       <div class="stat-card"><div class="num" style="color:#15803d;">${attended}</div><div class="lbl">حضر</div></div>
       <div class="stat-card"><div class="num" style="color:#b91c1c;">${absent}</div><div class="lbl">غاب</div></div>
       <div class="stat-card"><div class="num" style="color:#b45309;">${postponed}</div><div class="lbl">اتأجلت</div></div>
     </div>
     ${rate!==null?`<div class="fu-rate"><span>📈 نسبة الحضور (حضر ÷ حضر + غاب)</span><b>${rate}%</b></div>`:''}`;
-  const body = dates.length ? dates.map(date=>{
-    const items = groups[date].slice().sort((a,b)=> (a.slotTime||'').localeCompare(b.slotTime||''));
-    return `
-      <div style="display:flex;align-items:center;gap:10px;margin:16px 0 10px;">
-        <span style="font-size:12.5px;font-weight:800;color:var(--teal-dark);white-space:nowrap;">📅 ${esc(dayLabel(date))}</span>
+  const body = order.map(date=>{
+    const items = (groups[date]||[]).slice().sort((a,b)=> (a.slotTime||'99:99').localeCompare(b.slotTime||'99:99'));
+    if(!items.length && date!==todayStr) return '';
+    const dA = items.filter(f=>f.status==='حضر').length, dB = items.filter(f=>f.status==='غاب').length, dC = items.filter(f=>f.status==='تأجيل').length;
+    const isToday = date===todayStr;
+    const header = `
+      <div style="display:flex;align-items:center;gap:10px;margin:18px 0 8px;">
+        <span style="font-size:13px;font-weight:800;color:${isToday?'#fff':'var(--teal-dark)'};${isToday?'background:linear-gradient(135deg,#14b8a6,#0d9488);padding:4px 14px;border-radius:20px;':''}white-space:nowrap;">📅 ${esc(fuDayLabel(date, todayStr, yesterdayStr))}</span>
+        <span style="font-size:10.5px;color:var(--text-dim);white-space:nowrap;">${esc(date)}</span>
         <span style="flex:1;height:1px;background:linear-gradient(to left,var(--line),transparent);"></span>
-        <span style="font-size:10.5px;color:var(--text-dim);">${items.length} حصة</span>
       </div>
-      <div class="list">
-        ${items.map(f=>{
-          const col = attStatusColor(f.status);
-          const sup = (isOwner() && f.supervisorId) ? `<span class="sr-owner-badge" style="margin:6px 0 0;">👤 ${esc(supervisorLabel(f.supervisorId))}</span>` : '';
-          return `<div class="fu-entry" style="border-right-color:${col.c};">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-              <div style="min-width:0;">
-                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                  ${f.slotTime?`<span class="fu-time">🕒 ${esc(formatTime12(f.slotTime))}</span>`:''}
-                  <span class="p-name">${esc(f.studentName)||'بدون اسم'}</span>
-                </div>
-                <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">👩‍🏫 ${esc(f.teacherName)||'—'} ${f.subject?'• '+esc(f.subject):''}</div>
+      ${items.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+        <span class="sr-chip" style="background:#f1f5f9;color:#475569;">${items.length} حصة</span>
+        <span class="sr-chip" style="background:#dcfce7;color:#15803d;">✅ ${dA}</span>
+        <span class="sr-chip" style="background:#fee2e2;color:#b91c1c;">❌ ${dB}</span>
+        <span class="sr-chip" style="background:#fef3c7;color:#b45309;">⏸ ${dC}</span>
+      </div>`:''}`;
+    if(!items.length) return header + `<div class="empty" style="padding:14px 0;"><div>لا توجد متابعات مسجّلة اليوم بعد</div></div>`;
+    return header + `<div class="list">
+      ${items.map(f=>{
+        const col = attStatusColor(f.status);
+        const sup = (isOwner() && f.supervisorId) ? `<span class="sr-owner-badge" style="margin:6px 0 0;">👤 ${esc(supervisorLabel(f.supervisorId))}</span>` : '';
+        return `<div class="fu-entry" style="border-right-color:${col.c};">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+            <div style="min-width:0;">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                ${f.slotTime?`<span class="fu-time">🕒 ${esc(formatTime12(f.slotTime))}</span>`:''}
+                <span class="p-name">${esc(f.studentName)||'بدون اسم'}</span>
+                ${f.legacy?`<span class="fu-time" style="background:#f5f3ff;color:#6d28d9;">🗂️ جدول قديم</span>`:''}
               </div>
-              <span class="badge" style="background:${col.bg};color:${col.c};font-size:11px;padding:4px 10px;white-space:nowrap;">${f.status?esc(f.status):'📝 ملاحظة'}</span>
+              <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">👩‍🏫 ${esc(f.teacherName)||'—'} ${f.subject?'• '+esc(f.subject):''}</div>
             </div>
-            ${f.note?`<div style="font-size:11.5px;color:#475569;background:#f8fafc;border-radius:8px;padding:6px 9px;margin-top:8px;">📝 ${esc(f.note)}</div>`:''}
-            ${sup}
-          </div>`;
-        }).join('')}
-      </div>`;
-  }).join('') : `<div class="empty">${ICON.empty}<div>لا توجد متابعات في هذه الفترة</div></div>`;
+            <span class="badge" style="background:${col.bg};color:${col.c};font-size:11px;padding:4px 10px;white-space:nowrap;">${f.status?esc(f.status):'📝 ملاحظة'}</span>
+          </div>
+          ${f.note?`<div style="font-size:11.5px;color:#475569;background:#f8fafc;border-radius:8px;padding:6px 9px;margin-top:8px;">📝 ${esc(f.note)}</div>`:''}
+          ${sup}
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
   return stats + body;
 }
 function pageFollowups(){
-  const chip = (active, label, fn) => `<button class="fu-chip ${active?'active':''}" onclick="${fn}">${label}</button>`;
+  const chip = (active, label, fn) => `<button class="fu-chip ${active?'active':''}" onclick="${fn}">${esc(label)}</button>`;
+  const all = fuAllEntries();
+  let supChips = '';
+  if(isOwner()){
+    const ids = fuSupervisorIds(all);
+    if(fuSupervisor!=='all' && !ids.includes(fuSupervisor)) fuSupervisor = 'all';
+    supChips = `<div class="fu-chip-row">
+      ${chip(fuSupervisor==='all', `👥 الكل (${all.length})`, "setFuSupervisor('all')")}
+      ${ids.map(id=>chip(fuSupervisor===id, `👤 ${supervisorLabel(id)} (${all.filter(f=>f.supervisorId===id).length})`, `setFuSupervisor('${jsAttr(id)}')`)).join('')}
+    </div>`;
+  }
   return `
-    <h1 class="page-title">📋 متابعات الحضور</h1>
-    <div style="font-size:11.5px;color:var(--text-dim);margin-top:4px;">${isOwner()?'كل الحصص المسجّلة من كل المشرفات':'الحصص التي سجّلتيها من شاشة الجدول'}</div>
+    <h1 class="page-title">✅ متابعة الحضور</h1>
+    <div style="font-size:11.5px;color:var(--text-dim);margin-top:4px;">${isOwner()?'كل الحصص المسجّلة، مقسّمة بالأيام':'الحصص التي سجّلتيها من شاشة الجدول، مقسّمة بالأيام'}</div>
     <div class="sr-toolbar" style="margin-top:12px;">
       <input class="sr-search" placeholder="🔍 دوّر باسم الطالب أو المعلمة أو المادة أو الملاحظة${isOwner()?' أو المشرفة':''}..." value="${escAttr(fuSearch)}" oninput="fuSearch=this.value; renderFuList();">
     </div>
-    <div class="fu-chip-row">
-      ${chip(fuPeriod==='today','اليوم',"setFuPeriod('today')")}
-      ${chip(fuPeriod==='week','آخر 7 أيام',"setFuPeriod('week')")}
-      ${chip(fuPeriod==='month','آخر 30 يوم',"setFuPeriod('month')")}
-      ${chip(fuPeriod==='all','الكل',"setFuPeriod('all')")}
-    </div>
+    ${supChips}
     <div class="fu-chip-row" style="margin-top:0;">
       ${chip(fuStatus==='all','كل الحالات',"setFuStatus('all')")}
       ${chip(fuStatus==='حضر','✅ حضر',"setFuStatus('حضر')")}
@@ -1172,8 +1155,8 @@ function studentRecordCard(r){
       </div>
       <div style="display:flex;gap:6px;">
         ${r.groupLink?`<button class="icon-circle" style="background:#f3e8ff;color:#7e22ce;" title="جروب الواتساب" onclick="event.stopPropagation();openGroupLink('${jsAttr(r.groupLink)}')">${ICON.wa}</button>`:''}
-        ${r.teacherPhone?`<button class="icon-circle" style="background:#eef2ff;color:#4f46e5;" title="واتساب المعلمة" onclick="event.stopPropagation();window.open('${waLink(r.teacherPhone)}','_blank')">${ICON.wa}</button>`:''}
-        ${r.studentPhone?`<button class="icon-circle" style="background:#dcfce7;color:#15803d;" title="واتساب الطالب" onclick="event.stopPropagation();window.open('${waLink(r.studentPhone)}','_blank')">${ICON.wa}</button>`:''}
+        ${r.teacherPhone?`<button class="icon-circle" style="background:#eef2ff;color:#4f46e5;" title="واتساب المعلمة" onclick="event.stopPropagation();waOpen('${jsAttr(r.teacherPhone)}','')">${ICON.wa}</button>`:''}
+        ${r.studentPhone?`<button class="icon-circle" style="background:#dcfce7;color:#15803d;" title="واتساب الطالب" onclick="event.stopPropagation();waOpen('${jsAttr(r.studentPhone)}','')">${ICON.wa}</button>`:''}
       </div>
     </div>
     <div class="sr-chips">
@@ -1264,7 +1247,7 @@ function srTeacherTypeahead(q){
   if(q.length<2){ box.style.display='none'; box.innerHTML=''; return; }
   const matches = DATA.teachers.filter(t=>!t.archived && t.name.includes(q));
   if(!matches.length){ box.innerHTML = `<div style="padding:8px;font-size:12px;color:var(--text-faint)">لا يوجد نتائج</div>`; box.style.display='block'; return; }
-  box.innerHTML = matches.map(t=>`<div style="padding:8px;font-size:12px;cursor:pointer;border-bottom:1px solid #f1f5f9;" onclick="pickSrTeacher('${t.id}','${t.name.replace(/'/g,"\\'")}','${(t.phone||'').replace(/'/g,"\\'")}')">${esc(t.name)}</div>`).join('');
+  box.innerHTML = matches.map(t=>`<div style="padding:8px;font-size:12px;cursor:pointer;border-bottom:1px solid #f1f5f9;" onclick="pickSrTeacher('${t.id}','${jsAttr(t.name)}','${jsAttr(t.phone||'')}')">${esc(t.name)}</div>`).join('');
   box.style.display='block';
 }
 function pickSrTeacher(id, name, phone){
@@ -1298,7 +1281,11 @@ async function saveStudentRecord(id){
       .filter(sl=>sl.time),
   };
   if(!rec.studentName){ showToast('اكتب اسم الطالب'); return; }
-  if(rec.groupLink && !/^https?:\/\//i.test(rec.groupLink)){ showToast('رابط الجروب لازم يبدأ بـ https://'); return; } // === تعديل: التأكد من شكل الرابط ===
+  if(rec.groupLink){ // === تعديل: تنظيف رابط الجروب تلقائيًا (يضيف https:// لو ناقصة) ===
+    const cleanLink = normalizeGroupLink(rec.groupLink);
+    if(!cleanLink){ showToast('رابط الجروب غير صحيح - انسخه من واتساب كما هو'); return; }
+    rec.groupLink = cleanLink;
+  }
 
   if(id){
     const { error } = await sb.from('student_records').update(studentRecordToDb(rec)).eq('id', id);
@@ -1370,8 +1357,8 @@ function trialCard(t){
       </div>
     </div>
     <div class="sc-wa-buttons">
-      ${t.phone?`<button class="wa-btn-sm wa-student-sm" onclick="window.open('${waLink(t.phone)}','_blank')">${ICON.wa} الطالب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الطالب</button>`}
-      ${matchedTeacher&&matchedTeacher.phone?`<button class="wa-btn-sm wa-teacher-sm" onclick="window.open('${waLink(matchedTeacher.phone)}','_blank')">${ICON.wa} المعلم</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} المعلم</button>`}
+      ${t.phone?`<button class="wa-btn-sm wa-student-sm" onclick="waOpen('${jsAttr(t.phone)}','')">${ICON.wa} الطالب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الطالب</button>`}
+      ${matchedTeacher&&matchedTeacher.phone?`<button class="wa-btn-sm wa-teacher-sm" onclick="waOpen('${jsAttr(matchedTeacher.phone)}','')">${ICON.wa} المعلم</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} المعلم</button>`}
       ${t.link?`<button class="wa-btn-sm wa-group-sm" onclick="openGroupLink('${jsAttr(t.link)}')">${ICON.wa} الجروب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الجروب</button>`}
     </div>
     <button class="icon-btn" style="width:100%;margin-top:8px;background:linear-gradient(135deg,#14b8a6,#0d9488);color:#fff;font-weight:700;border:none;" onclick="event.stopPropagation();convertTrialToStudent('${t.id}')">🚀 تحويل لطالب مشترك</button>
@@ -1419,7 +1406,7 @@ function trialTeacherTypeahead(q){
   if(q.length<2){ box.style.display='none'; box.innerHTML=''; return; }
   const matches = DATA.teachers.filter(t=>!t.archived && t.name.includes(q));
   if(!matches.length){ box.innerHTML = `<div style="padding:8px;font-size:12px;color:var(--text-faint)">لا يوجد نتائج</div>`; box.style.display='block'; return; }
-  box.innerHTML = matches.map(t=>`<div style="padding:8px;font-size:12px;cursor:pointer;border-bottom:1px solid #f1f5f9;" onclick="pickTrialTeacher('${t.id}','${t.name.replace(/'/g,"\\'")}')">${esc(t.name)}</div>`).join('');
+  box.innerHTML = matches.map(t=>`<div style="padding:8px;font-size:12px;cursor:pointer;border-bottom:1px solid #f1f5f9;" onclick="pickTrialTeacher('${t.id}','${jsAttr(t.name)}')">${esc(t.name)}</div>`).join('');
   box.style.display='block';
 }
 function pickTrialTeacher(id, name){
@@ -1535,7 +1522,7 @@ function teacherCard(t){
       <span style="margin-right:auto;background:#e0f2fe;color:#0369a1;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;white-space:nowrap;">عدد الطلاب: ${studentCount}</span>
     </div>
     <div class="p-actions">
-      <button class="icon-circle" style="background:#dcfce7;color:#15803d;" title="واتساب" onclick="window.open('${waLink(t.phone)}','_blank')">${ICON.wa}</button>
+      <button class="icon-circle" style="background:#dcfce7;color:#15803d;" title="واتساب" onclick="waOpen('${jsAttr(t.phone)}','')">${ICON.wa}</button>
       <button class="icon-circle" style="background:#e0f2fe;color:#0369a1;" title="تعديل" onclick="openTeacherModal('${t.id}')">${ICON.edit}</button>
       <button class="icon-circle" style="background:#fef3c7;color:#b45309;" title="أرشفة" onclick="toggleArchive('teachers','${t.id}')">${ICON.archive}</button>
     </div>
@@ -1628,8 +1615,8 @@ function recordClassCard(r, sl, date){
       </div>
     </div>
     <div class="sc-wa-buttons">
-      ${r.studentPhone?`<button class="wa-btn-sm wa-student-sm" onclick="window.open('${waLink(r.studentPhone)}','_blank')">${ICON.wa} الطالب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الطالب</button>`}
-      ${r.teacherPhone?`<button class="wa-btn-sm wa-teacher-sm" onclick="window.open('${waLink(r.teacherPhone)}','_blank')">${ICON.wa} المعلمة</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} المعلمة</button>`}
+      ${r.studentPhone?`<button class="wa-btn-sm wa-student-sm" onclick="waOpen('${jsAttr(r.studentPhone)}','')">${ICON.wa} الطالب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الطالب</button>`}
+      ${r.teacherPhone?`<button class="wa-btn-sm wa-teacher-sm" onclick="waOpen('${jsAttr(r.teacherPhone)}','')">${ICON.wa} المعلمة</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} المعلمة</button>`}
       <!-- === تعديل: الزر الثالث - جروب الواتساب === -->
       ${r.groupLink?`<button class="wa-btn-sm wa-group-sm" onclick="openGroupLink('${jsAttr(r.groupLink)}')">${ICON.wa} الجروب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الجروب</button>`}
     </div>
@@ -1685,7 +1672,16 @@ async function upsertFollowup(r, date, time, patch){
     student_name: r.studentName || null, teacher_name: r.teacherName || null, subject: r.subject || null
   };
   const { error } = await sb.from('class_followups').insert(row);
-  if(error){ console.error('class_followups insert:', error); showToast('تعذر الحفظ: ' + error.message); return false; }
+  if(error){
+    if(error.code==='23505'){ // === تعديل: الحصة مسجلة بالفعل من جهاز آخر - نحدّثها بدل الإضافة ===
+      const { data:found } = await sb.from('class_followups').select('*').eq('student_record_id', r.id).eq('attend_date', date).eq('slot_time', time).maybeSingle();
+      if(found){
+        if(!DATA.followups.find(f=>f.id===found.id)) DATA.followups.unshift(mapFollowup(found));
+        return upsertFollowup(r, date, time, patch);
+      }
+    }
+    console.error('class_followups insert:', error); showToast('تعذر الحفظ: ' + error.message); return false;
+  }
   if(!DATA.followups.find(f=>f.id===row.id)) DATA.followups.unshift(mapFollowup({...row, created_at:new Date().toISOString()}));
   return true;
 }
@@ -1744,8 +1740,8 @@ function sessionCard(s){
       </div>
     </div>
     <div class="sc-wa-buttons">
-      ${student&&student.phone?`<button class="wa-btn-sm wa-student-sm" onclick="window.open('${waLink(student.phone, null, student.country)}','_blank')">${ICON.wa} الطالب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الطالب</button>`}
-      ${teacher&&teacher.phone?`<button class="wa-btn-sm wa-teacher-sm" onclick="window.open('${waLink(teacher.phone)}','_blank')">${ICON.wa} المعلم</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} المعلم</button>`}
+      ${student&&student.phone?`<button class="wa-btn-sm wa-student-sm" onclick="waOpen('${jsAttr(student.phone)}','${jsAttr(student.country)}')">${ICON.wa} الطالب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الطالب</button>`}
+      ${teacher&&teacher.phone?`<button class="wa-btn-sm wa-teacher-sm" onclick="waOpen('${jsAttr(teacher.phone)}','')">${ICON.wa} المعلم</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} المعلم</button>`}
       ${s.link?`<button class="wa-btn-sm wa-group-sm" onclick="openGroupLink('${jsAttr(s.link)}')">${ICON.wa} الجروب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الجروب</button>`}
     </div>
     ${attendanceQuickBar(s.id)}
@@ -1753,7 +1749,7 @@ function sessionCard(s){
 }
 const pendingAttNotes = {};
 function attendanceQuickBar(sessionId){
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateStr(new Date()); // === تعديل: تاريخ محلي بدل UTC ===
   const todayAttend = DATA.attendance.find(a=>a.sessionId===sessionId && a.date===today);
   const noteVal = (pendingAttNotes[sessionId] !== undefined) ? pendingAttNotes[sessionId] : (todayAttend ? (todayAttend.note||'') : '');
   const btn = (status, label, activeBg, activeC, idleBg, idleC) => {
@@ -1781,15 +1777,15 @@ function renderSessionDetailsBody(id){
   const studentName = student ? student.name : (s.studentName || 'بدون اسم');
   const teacherName = teacher ? teacher.name : 'بدون معلم';
   const slotsTxt = (s.slots||[]).map(sl=>`${sl.day} ${formatTime12(sl.time)}`).join(' · ') || 'بدون مواعيد';
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateStr(new Date()); // === تعديل: تاريخ محلي بدل UTC ===
   const todayAttend = DATA.attendance.find(a=>a.sessionId===id && a.date===today);
   const attCol = {'حضر':{bg:'#dcfce7',c:'#15803d'},'غاب':{bg:'#fee2e2',c:'#b91c1c'},'تأجيل':{bg:'#fef3c7',c:'#b45309'}};
   const recentHistory = DATA.attendance.filter(a=>a.sessionId===id).slice(0,5);
   document.getElementById('modalBody').innerHTML = `
     <h3>تفاصيل الحصة</h3>
     <div class="sc-wa-buttons" style="margin-bottom:15px;border:none;padding:0;">
-      ${student&&student.phone?`<button class="wa-btn-sm wa-student-sm" onclick="window.open('${waLink(student.phone, null, student.country)}','_blank')">${ICON.wa} الطالب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الطالب</button>`}
-      ${teacher&&teacher.phone?`<button class="wa-btn-sm wa-teacher-sm" onclick="window.open('${waLink(teacher.phone)}','_blank')">${ICON.wa} المعلم</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} المعلم</button>`}
+      ${student&&student.phone?`<button class="wa-btn-sm wa-student-sm" onclick="waOpen('${jsAttr(student.phone)}','${jsAttr(student.country)}')">${ICON.wa} الطالب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الطالب</button>`}
+      ${teacher&&teacher.phone?`<button class="wa-btn-sm wa-teacher-sm" onclick="waOpen('${jsAttr(teacher.phone)}','')">${ICON.wa} المعلم</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} المعلم</button>`}
       ${s.link?`<button class="wa-btn-sm wa-group-sm" onclick="openGroupLink('${jsAttr(s.link)}')">${ICON.wa} الجروب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الجروب</button>`}
     </div>
     <div class="field"><label>الطالب</label><div style="padding:8px;background:#f8fafc;border-radius:8px;font-size:13px;">${studentName}</div></div>
@@ -1817,7 +1813,7 @@ function renderSessionDetailsBody(id){
   `;
 }
 async function markAttendance(sessionId, status){
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateStr(new Date()); // === تعديل: تاريخ محلي بدل UTC ===
   const existing = DATA.attendance.find(a=>a.sessionId===sessionId && a.date===today);
   const input = document.getElementById('att_note_'+sessionId);
   const note = input ? input.value.trim()
@@ -1839,7 +1835,7 @@ async function markAttendance(sessionId, status){
   showToast('تم تسجيل الحضور: '+status);
 }
 async function saveAttendanceNote(sessionId){
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateStr(new Date()); // === تعديل: تاريخ محلي بدل UTC ===
   const input = document.getElementById('att_note_'+sessionId);
   const note = input ? input.value.trim() : (pendingAttNotes[sessionId]||'').trim();
   const existing = DATA.attendance.find(a=>a.sessionId===sessionId && a.date===today);
@@ -1947,7 +1943,7 @@ function teacherTypeahead(q){
   if(q.length<2){ box.style.display='none'; box.innerHTML=''; return; }
   const matches = DATA.teachers.filter(t=>!t.archived && t.name.includes(q));
   if(!matches.length){ box.innerHTML = `<div style="padding:8px;font-size:12px;color:var(--text-faint)">لا يوجد نتائج</div>`; box.style.display='block'; return; }
-  box.innerHTML = matches.map(t=>`<div style="padding:8px;font-size:12px;cursor:pointer;border-bottom:1px solid #f1f5f9;" onclick="pickTeacher('${t.id}','${t.name.replace(/'/g,"\\'")}')">${t.name}</div>`).join('');
+  box.innerHTML = matches.map(t=>`<div style="padding:8px;font-size:12px;cursor:pointer;border-bottom:1px solid #f1f5f9;" onclick="pickTeacher('${t.id}','${jsAttr(t.name)}')">${esc(t.name)}</div>`).join('');
   box.style.display='block';
 }
 function pickTeacher(id, name){
@@ -2074,7 +2070,7 @@ function pagePayments(){
       ${list.map(s=>`<div class="p-card">
         <div class="p-top">
           <div class="avatar">${s.name?s.name[0]:'ط'}</div>
-          <div><div class="p-name">${s.name}</div></div>
+          <div><div class="p-name">${esc(s.name)}</div></div>
           <select onchange="quickPayment('${s.id}', this.value)" class="badge ${s.payment==='تم الدفع'?'b-paid':s.payment==='لم يتم الدفع'?'b-unpaid':'b-pending'}" style="border:none;">
             ${['تم الدفع','لم يتم الدفع','معلق'].map(o=>`<option ${s.payment===o?'selected':''}>${o}</option>`).join('')}
           </select>
@@ -2302,6 +2298,7 @@ document.getElementById('modalBg').addEventListener('click', e=>{ if(e.target.id
 window.addEventListener('popstate', e=>{
   const state = e.state || {route:'dashboard', modal:false};
   ROUTE = (!isOwner() && !SUPERVISOR_ALLOWED_ROUTES.includes(state.route)) ? 'schedule_sessions' : state.route;
+  if(ROUTE==='attendance') ROUTE = 'followups'; // === تعديل: المسار القديم يفتح التبويب الجديد ===
   render();
   const modalBg = document.getElementById('modalBg');
   if(state.modal){ modalBg.classList.add('show'); }
@@ -2332,10 +2329,8 @@ searchInput.addEventListener('input', ()=>{
     (r.studentPhone||'').includes(q) ||
     (r.subject||'').toLowerCase().includes(q)
   ));
-  const attMatches = DATA.attendance.filter(a=>{
-    const info = attendanceRowInfo(a);
-    return info.studentName.toLowerCase().includes(q) || info.teacherName.toLowerCase().includes(q);
-  }).map(a=>({...a, ...attendanceRowInfo(a)}));
+  // === تعديل: البحث في كل المتابعات (الجديدة + سجل الحضور القديم) ===
+  const attMatches = fuAllEntries().filter(a=>(a.studentName||'').toLowerCase().includes(q) || (a.teacherName||'').toLowerCase().includes(q));
   if(!studentMatches.length && !teacherMatches.length && !sessionMatches.length && !trialMatches.length && !recordMatches.length && !attMatches.length){
     searchResultsBox.innerHTML = `<div style="padding:10px;font-size:12px;color:var(--text-faint);text-align:center;">لا يوجد نتائج</div>`;
     searchResultsBox.style.display='block';
@@ -2365,7 +2360,7 @@ searchInput.addEventListener('input', ()=>{
   }
   if(attMatches.length){
     html += `<div style="padding:6px 10px;font-size:10px;color:var(--text-dim);background:#f8fafc;">✅ متابعة الحضور</div>`;
-    html += attMatches.slice(0,5).map(a=>row(a.studentName, `${a.status} • ${a.date}`, '✅', `goTo('attendance');closeSearch();`)).join('');
+    html += attMatches.slice(0,5).map(a=>row(a.studentName, `${a.status||'ملاحظة'} • ${a.date}`, '✅', `goTo('followups');closeSearch();`)).join('');
   }
   searchResultsBox.innerHTML = html;
   searchResultsBox.style.display='block';
