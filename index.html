@@ -321,6 +321,10 @@ html.has-session #authScreen{display:none;}
 .pay-phone{font-size:12.5px;font-weight:700;color:var(--text-dim);}
 .pay-r1{align-items:flex-start;}
 .pay-name{flex:1;font-size:17px;line-height:1.35;white-space:normal;overflow:hidden;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.pp-badge{display:inline-block;background:#fde047;color:#713f12;font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:20px;border:1px solid #facc15;}
+.pp-reason{font-size:11px;color:#854d0e;background:#fefce8;border:1px solid #fef08a;border-radius:8px;padding:5px 9px;margin-top:6px;}
+.pp-move{margin-top:10px;font-size:11.5px;color:#475569;line-height:1.9;background:#f8fafc;border-radius:10px;padding:7px 10px;}
+.pp-move span{color:var(--text-dim);}
 </style>
 <script>
 // === تعديل: كشف مبكر ومتزامن (قبل أول رسم للصفحة) لوجود جلسة دخول محفوظة في المتصفح ===
@@ -958,7 +962,7 @@ function esc(str){ const d=document.createElement('div'); d.textContent=str==nul
 function jsAttr(str){ return String(str==null?'':str).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/[\r\n]/g,' ').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); } // === تعديل: حماية النص داخل أزرار onclick من كسر الخاصية ===
 
 let CURRENT_PROFILE = null;
-const SUPERVISOR_ALLOWED_ROUTES = ['schedule_sessions','student_records','followups']; // === تعديل: حذف تبويب متابعة الحضور القديم، والاعتماد على تبويب المتابعة الجديد ===
+const SUPERVISOR_ALLOWED_ROUTES = ['schedule_sessions','student_records','followups','postponed']; // === تعديل: حذف تبويب متابعة الحضور القديم، والاعتماد على تبويب المتابعة الجديد ===
 async function fetchProfile(){
   try{
     const { data:{ user } } = await sb.auth.getUser();
@@ -1002,7 +1006,7 @@ function teacherToDb(t){ return {id:t.id, name:t.name, phone:t.phone||null, sala
 function sessionToDb(s){ return {id:s.id, student_id:s.studentId||null, student_name:s.studentName||null, teacher_id:s.teacherId||null, subjects:s.subjects||[], slots:s.slots||[], status:s.status, link:s.link||null, archived:!!s.archived}; }
 function mapTrial(r){ return {id:r.id, studentName:r.student_name||'', phone:r.phone||'', subject:r.subject||'', teacherName:r.teacher_name||'', schedule:r.schedule||'', slots:r.slots||[], status:r.status||'مجدولة', link:r.link||'', createdAt:r.created_at||'', archived:!!r.archived}; }
 // === تعديل: دوال جديدة - تحويل بيانات متابعات الحضور ===
-function mapFollowup(r){ return {id:r.id, recordId:r.student_record_id||'', supervisorId:r.supervisor_id||'', date:r.attend_date, slotTime:r.slot_time||'', status:r.status||'', note:r.note||'', studentName:r.student_name||'', teacherName:r.teacher_name||'', subject:r.subject||'', createdAt:r.created_at||''}; }
+function mapFollowup(r){ return {id:r.id, recordId:r.student_record_id||'', supervisorId:r.supervisor_id||'', date:r.attend_date, slotTime:r.slot_time||'', status:r.status||'', note:r.note||'', studentName:r.student_name||'', teacherName:r.teacher_name||'', subject:r.subject||'', createdAt:r.created_at||'', postponedToDate:r.postponed_to_date||'', postponedToTime:r.postponed_to_time||'', reason:r.postpone_reason||''}; } // === تعديل (التأجيلات): تاريخ وساعة التأجيل الجديدة + السبب ===
 function mapAttendance(r){ return {id:r.id, sessionId:r.session_id, date:r.attend_date, status:r.status, note:r.note||''}; }
 function mapStudentRecord(r){
   return {
@@ -1279,6 +1283,7 @@ const NAV_ITEMS = [
   {id:'schedule_sessions', label:'الجدول', emoji:'🗓️', icon:ICON.schedule},
   // === تعديل: تم حذف تبويب (متابعة الحضور) القديم نهائيًا ===
   {id:'followups', label:'متابعة الحضور', emoji:'✅', icon:ICON.schedule}, // === تعديل: التبويب الجديد المطوّر (يحمل اسم متابعة الحضور) ===
+  {id:'postponed', label:'التأجيلات', emoji:'⏳', icon:ICON.schedule}, // === تعديل (التأجيلات): تبويب مراقبة الحصص المؤجلة ===
   {id:'teachers', label:'المعلمين', emoji:'👩‍🏫', icon:ICON.teachers},
   {id:'payments', label:'المدفوعات', emoji:'💳', icon:ICON.payments},
   {id:'reports', label:'التقارير', emoji:'📊', icon:ICON.reports},
@@ -1307,6 +1312,7 @@ function render(){
   else if(ROUTE==='trials') m.innerHTML = pageTrials();
   else if(ROUTE==='student_records') m.innerHTML = pageStudentRecords();
   // === تعديل: تم حذف مسار الصفحة القديمة (attendance) ===
+  else if(ROUTE==='postponed') m.innerHTML = pagePostponed(); // === تعديل (التأجيلات) ===
   else if(ROUTE==='followups') m.innerHTML = pageFollowups(); // === تعديل: تبويب متابعات الحضور ===
   else if(ROUTE==='students') m.innerHTML = pageStudents();
   else if(ROUTE==='teachers') m.innerHTML = pageTeachers();
@@ -1534,6 +1540,7 @@ function fuBaseList(){
 // === تعديل: دالة جديدة - عدد حصص اليوم المجدولة (مطابقة لما يظهر في شاشة الجدول) ===
 function fuScheduledTodayCount(){
   const day = DAYS[todayArIdx()];
+  const todayStr0 = localDateStr(new Date());
   let n = 0;
   DATA.student_records.forEach(r=>{
     if(r.archived) return;
@@ -1541,6 +1548,13 @@ function fuScheduledTodayCount(){
     n += (r.slots||[]).filter(sl=>sl.day===day && sl.time).length;
   });
   if(fuSupervisor==='all') n += DATA.sessions.filter(x=>!x.archived && x.slots && x.slots.some(sl=>sl.day===day)).length; // الحصص القديمة بدون مشرفة: مع "الكل" فقط
+  // === تعديل (التأجيلات): الحصص المؤجلة إلى اليوم تُحسب ضمن حصص اليوم ===
+  DATA.followups.forEach(f=>{
+    if(f.status!=='تأجيل' || f.postponedToDate!==todayStr0 || !f.postponedToTime) return;
+    if(fuSupervisor!=='all' && f.supervisorId!==fuSupervisor) return;
+    const rr = DATA.student_records.find(x=>x.id===f.recordId);
+    if(rr && !rr.archived) n++;
+  });
   return n;
 }
 function setFuStatus(v){ fuStatus = v; render(); }
@@ -1627,6 +1641,7 @@ function fuListInner(){
             <span class="badge" style="background:${col.bg};color:${col.c};font-size:11px;padding:4px 10px;white-space:nowrap;">${f.status?esc(f.status):'📝 ملاحظة'}</span>
           </div>
           ${f.note?`<div style="font-size:11.5px;color:#475569;background:#f8fafc;border-radius:8px;padding:6px 9px;margin-top:8px;">📝 ${esc(f.note)}</div>`:''}
+          ${f.postponedToDate?`<div style="font-size:11.5px;color:#854d0e;background:#fefce8;border:1px solid #fef08a;border-radius:8px;padding:6px 9px;margin-top:8px;">⏳ اتأجلت إلى ${esc(ppDayName(f.postponedToDate))} ${esc(f.postponedToDate)} • ${esc(formatTime12(f.postponedToTime))}${f.reason?' — السبب: '+esc(f.reason):''}</div>`:''}
           ${sup}
         </div>`;
       }).join('')}
@@ -2281,7 +2296,9 @@ let dayAnimNext = false;
 function setScheduleDay(i){ scheduleDay = i; dayAnimNext = true; render(); }
 function scheduleCountForDay(dayName){
   let n = DATA.sessions.filter(x=>!x.archived && x.slots && x.slots.some(sl=>sl.day===dayName)).length;
-  DATA.student_records.forEach(r=>{ if(!r.archived) n += (r.slots||[]).filter(sl=>sl.day===dayName && sl.time).length; });
+  const dDate = dateForDayIdx(DAYS.indexOf(dayName)); // === تعديل (التأجيلات): الحصة المؤجلة تختفي من يومها وتُحسب في اليوم الجديد ===
+  DATA.student_records.forEach(r=>{ if(!r.archived) n += (r.slots||[]).filter(sl=>sl.day===dayName && sl.time && !ppAway(r.id, dDate, sl.time)).length; });
+  n += ppInForDate(dDate).length;
   return n;
 }
 // يحرّك الشريط أفقيًا فقط ليظهر اليوم النشط في المنتصف (بدون تحريك الصفحة رأسيًا)
@@ -2306,8 +2323,13 @@ function renderDaySchedule(){
     const cardDate = dateForDayIdx(scheduleDay); // === تعديل: تاريخ اليوم المعروض في الجدول (لتسجيل المتابعة) ===
     DATA.student_records.filter(r => !r.archived && r.slots && r.slots.length).forEach(r => {
         r.slots.filter(sl => sl.day === day && sl.time).forEach(sl => {
+            if(ppAway(r.id, cardDate, sl.time)) return; // === تعديل (التأجيلات): الحصة المؤجلة تختفي من يومها ===
             recordItems.push({ t: sl.time, html: recordClassCard(r, sl, cardDate) });
         });
+    });
+    // === تعديل (التأجيلات): الحصص المؤجلة إلى هذا التاريخ تظهر هنا بشارة صفراء ===
+    ppInForDate(cardDate).forEach(({f, r}) => {
+        recordItems.push({ t: f.postponedToTime, html: recordClassCard(r, { day, time: f.postponedToTime }, cardDate, f) });
     });
     _attMap = null; // === تعديل: تفريغ الخريطة المؤقتة بعد بناء البطاقات ===
     // === تعديل: دمج بطاقات الحصص القديمة مع بطاقات بيانات الطلاب وترتيبها بالوقت ===
@@ -2363,14 +2385,14 @@ function paymentBadge(r){
     ? `<span class="badge" style="background:#dcfce7;color:#15803d">دفع</span>`
     : `<span class="badge" style="background:#fee2e2;color:#b91c1c">لم يدفع</span>`;
 }
-function recordClassCard(r, sl, date){
+function recordClassCard(r, sl, date, hop){
   return `<div class="session-card">
     <div class="sc-header" onclick="openStudentRecordModal('${r.id}')">
       <div class="sc-time">${esc(formatTime12(sl.time))}</div>
       <div class="sc-info">
         <h4>${esc(r.studentName)||'بدون اسم'} ${r.subject?`<span style="display:inline-block;background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-right:6px;vertical-align:middle;">${esc(r.subject)}</span>`:''}</h4>
         <p>${esc(r.teacherName)||'بدون معلمة'}${r.sessionDuration?` • ${esc(r.sessionDuration)} د`:''}</p>
-        ${balanceChip(r)}<!-- === تعديل: عداد رصيد الحصص (المستهلك من الإجمالي) === -->
+        ${ppBadge(hop)}${balanceChip(r)}<!-- === تعديل: عداد رصيد الحصص (المستهلك من الإجمالي) === -->
       </div>
       <div style="margin-right:auto;">
         ${paymentBadge(r)}<!-- === تعديل: حالة الدفع بدل كلمة "مشترك" (نفس الحجم والمكان) === -->
@@ -2421,7 +2443,7 @@ function followupBar(r, date, time){
     <div class="fu-status-row">
       ${btn('حضر','✅ حضر','#15803d','#15803d','#dcfce7')}
       ${btn('غاب','❌ غاب','#b91c1c','#b91c1c','#fee2e2')}
-      ${btn('تأجيل','⏸ اتأجلت','#b45309','#b45309','#fef3c7')}
+      <button class="fu-btn" style="background:${fu&&fu.status==='تأجيل'?'#b45309':'#fef3c7'};color:${fu&&fu.status==='تأجيل'?'#fff':'#b45309'};" onclick="event.stopPropagation();openPostponeModal('${r.id}','${date}','${time}')">⏸ تأجيل</button><!-- === تعديل (التأجيلات): يفتح نافذة إجبارية (تاريخ + ساعة + سبب) === -->
     </div>
     <div class="fu-note-row">
       <input id="fu_note_${key}" value="${escAttr(noteVal)}" placeholder="📝 ملاحظاتك عن الحصة..." oninput="pendingFuNotes['${key}']=this.value">
@@ -2436,17 +2458,20 @@ async function upsertFollowup(r, date, time, patch){
     const upd = {};
     if('status' in patch) upd.status = patch.status || null;
     if('note' in patch) upd.note = patch.note || null;
+    if('postponedToDate' in patch){ upd.postponed_to_date = patch.postponedToDate || null; upd.postponed_to_time = patch.postponedToTime || null; upd.postpone_reason = patch.reason || null; } // === تعديل (التأجيلات) ===
     const { error } = await sb.from('class_followups').update(upd).eq('id', existing.id);
     if(error){ console.error('class_followups update:', error); showToast('تعذر الحفظ: ' + dbErrorText(error)); return false; }
     if('status' in patch) existing.status = patch.status || '';
     if('note' in patch) existing.note = patch.note || '';
+    if('postponedToDate' in patch){ existing.postponedToDate = patch.postponedToDate || ''; existing.postponedToTime = patch.postponedToTime || ''; existing.reason = patch.reason || ''; }
     return true;
   }
   const uidNow = await getCurrentUserId();
   const row = {
     id: uid(), student_record_id: r.id, supervisor_id: r.supervisorId || uidNow || null,
     attend_date: date, slot_time: time, status: patch.status || null, note: patch.note || null,
-    student_name: r.studentName || null, teacher_name: r.teacherName || null, subject: r.subject || null
+    student_name: r.studentName || null, teacher_name: r.teacherName || null, subject: r.subject || null,
+    ...(('postponedToDate' in patch) ? { postponed_to_date: patch.postponedToDate || null, postponed_to_time: patch.postponedToTime || null, postpone_reason: patch.reason || null } : {}) // === تعديل (التأجيلات): تُرسل فقط عند التأجيل ===
   };
   const { error } = await sb.from('class_followups').insert(row);
   if(error){
@@ -2487,6 +2512,149 @@ async function sendFollowupNote(recordId, date, time){
   render();
   showToast('📤 تم إرسال الملاحظة لمتابعات الحضور');
 }
+// ============ التأجيلات (نظام الحصص المؤجلة) ============
+// الفكرة: التأجيل يخص نسخة الحصة في هذا اليوم فقط (سطر المتابعة بتاعها يتحول لحالة "تأجيل" ويشاور على الميعاد الجديد).
+// الجدول الأساسي للطالب (مواعيد بيانات الطلاب) لا يتغير أبدًا، فالأسبوع الجاي بتتولد الحصة في ميعادها الأصلي عادي.
+const PP_WEEKDAY = {0:1,1:2,2:3,3:4,4:5,5:6,6:0};
+function ppDayName(dateStr){ const d = new Date(dateStr+'T00:00:00'); return isNaN(d) ? '' : DAYS[PP_WEEKDAY[d.getDay()]]; }
+function ppTime5(t){ return String(t||'').slice(0,5); }
+// هل الحصة دي (طالب + تاريخ + ميعاد) اتأجلت لميعاد تاني؟
+function ppAway(recordId, date, time){ const f = findFollowup(recordId, date, time); return !!(f && f.status==='تأجيل' && f.postponedToDate); }
+// الحصص المؤجلة اللي ميعادها الجديد هو التاريخ ده (ولسه ما اتأجلتش تاني)
+function ppInForDate(date){
+  const out = [];
+  DATA.followups.forEach(f=>{
+    if(f.status!=='تأجيل' || f.postponedToDate!==date || !f.postponedToTime) return;
+    const r = DATA.student_records.find(x=>x.id===f.recordId);
+    if(!r || r.archived) return;
+    if(ppAway(r.id, f.postponedToDate, f.postponedToTime)) return;
+    out.push({ f, r });
+  });
+  return out;
+}
+function ppBadge(hop){
+  if(!hop) return '';
+  return `<div style="margin-top:6px;"><span class="pp-badge">⏳ مؤجلة من يوم ${esc(ppDayName(hop.date))} ${esc(hop.date)}</span></div>${hop.reason?`<div class="pp-reason">📝 السبب: ${esc(hop.reason)}</div>`:''}`;
+}
+let ppSaving = false;
+function openPostponeModal(recordId, date, time){
+  const r = DATA.student_records.find(x=>x.id===recordId); if(!r) return;
+  const today = localDateStr(new Date());
+  document.getElementById('modalBody').innerHTML = `
+    <h3>⏸ تأجيل الحصة</h3>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.8;">
+      <b style="color:var(--text);">${esc(r.studentName)||'بدون اسم'}</b>${r.subject?' • '+esc(r.subject):''}<br>
+      الميعاد الحالي: ${esc(ppDayName(date))} ${esc(date)} • ${esc(formatTime12(time))}
+    </div>
+    <div class="row2">
+      <div class="field"><label>📅 تاريخ التأجيل الجديد</label><input type="date" id="pp_date" min="${today}"></div>
+      <div class="field"><label>🕒 ساعة التأجيل الجديدة</label><input type="time" id="pp_time"></div>
+    </div>
+    <div class="field"><label>📝 سبب التأجيل</label><input id="pp_reason" maxlength="200" placeholder="مثال: الطالب مسافر"></div>
+    <div style="font-size:10.5px;color:var(--text-dim);margin-top:-6px;">التاريخ والساعة والسبب إجباريين.</div>
+    <div class="modal-actions">
+      <button class="save" id="pp_save" onclick="confirmPostpone('${jsAttr(recordId)}','${jsAttr(date)}','${jsAttr(time)}')">تأكيد التأجيل</button>
+      <button class="cancel" onclick="closeModal()">إلغاء</button>
+    </div>`;
+  openModal();
+}
+async function confirmPostpone(recordId, date, time){
+  if(ppSaving) return;
+  const r = DATA.student_records.find(x=>x.id===recordId); if(!r) return;
+  const nd = (document.getElementById('pp_date').value || '').trim();
+  const nt = (document.getElementById('pp_time').value || '').trim();
+  const reason = (document.getElementById('pp_reason').value || '').trim();
+  if(!nd){ showToast('اختاري تاريخ التأجيل الجديد'); return; }
+  if(!nt){ showToast('اختاري ساعة التأجيل الجديدة'); return; }
+  if(!reason){ showToast('اكتبي سبب التأجيل'); return; }
+  if(nd < localDateStr(new Date())){ showToast('التاريخ الجديد لازم يكون النهارده أو بعده'); return; }
+  if(nd===date && ppTime5(nt)===ppTime5(time)){ showToast('ده نفس ميعاد الحصة الحالي - اختاري ميعاد تاني'); return; }
+  const dn = ppDayName(nd);
+  if((r.slots||[]).some(sl=>sl.day===dn && ppTime5(sl.time)===ppTime5(nt))){ showToast('عند الطالب حصة أساسية في نفس الميعاد ده - اختاري ميعاد تاني'); return; }
+  const clash = findFollowup(r.id, nd, nt);
+  const taken = DATA.followups.some(f=>f.recordId===r.id && f.status==='تأجيل' && f.postponedToDate===nd && ppTime5(f.postponedToTime)===ppTime5(nt));
+  if((clash && clash.status) || taken){ showToast('الميعاد ده فيه حصة تانية للطالب - اختاري ميعاد تاني'); return; }
+  ppSaving = true;
+  const btn = document.getElementById('pp_save'); if(btn) btn.disabled = true;
+  let ok = false;
+  try{ ok = await upsertFollowup(r, date, time, { status:'تأجيل', postponedToDate:nd, postponedToTime:nt, reason }); }
+  finally{ ppSaving = false; }
+  if(!ok){ if(btn) btn.disabled = false; return; }
+  closeModal(); render();
+  showToast('تم تأجيل الحصة إلى ' + dn + ' ' + nd);
+}
+let ppSupervisor = 'all';
+function setPpSupervisor(v){ ppSupervisor = v; render(); }
+// الحصص المؤجلة اللي لسه ما اتسجلتش (حضر / غاب) في ميعادها الجديد
+function ppPendingList(){
+  const out = [];
+  DATA.followups.forEach(f=>{
+    if(f.status!=='تأجيل' || !f.postponedToDate || !f.postponedToTime) return;
+    const target = findFollowup(f.recordId, f.postponedToDate, f.postponedToTime);
+    if(target && target.status) return; // اتسجلت (حضر / غاب) أو اتأجلت تاني (والتأجيل الأحدث هو اللي بيظهر)
+    const r = DATA.student_records.find(x=>x.id===f.recordId);
+    if(!r || r.archived) return;
+    out.push({ f, r });
+  });
+  out.sort((a,b)=> (a.f.postponedToDate+' '+a.f.postponedToTime).localeCompare(b.f.postponedToDate+' '+b.f.postponedToTime));
+  return out;
+}
+function pagePostponed(){
+  const todayStr = localDateStr(new Date());
+  const full = ppPendingList();
+  let list = full, chips = '';
+  if(isOwner()){
+    const ids = fuSupervisorIds(full.map(x=>x.f));
+    if(ppSupervisor!=='all' && !ids.includes(ppSupervisor)) ppSupervisor = 'all';
+    chips = `<div class="fu-chip-row">
+      <button class="fu-chip ${ppSupervisor==='all'?'active':''}" onclick="setPpSupervisor('all')">👥 الكل (${full.length})</button>
+      ${ids.map(id=>{ const c = supColor(id), on = ppSupervisor===id; return `<button class="fu-chip ${on?'active':''}" style="${on?`background:${c.fg};border-color:${c.fg};color:#fff;`:`background:${c.bg};border-color:${c.bd};color:${c.fg};`}" onclick="setPpSupervisor('${jsAttr(id)}')">👤 ${esc(supervisorLabel(id))} (${full.filter(x=>x.f.supervisorId===id).length})</button>`; }).join('')}
+    </div>`;
+    if(ppSupervisor!=='all') list = full.filter(x=>x.f.supervisorId===ppSupervisor);
+  }
+  const overdue = list.filter(x=>x.f.postponedToDate<todayStr).length;
+  const today = list.filter(x=>x.f.postponedToDate===todayStr).length;
+  const upcoming = list.filter(x=>x.f.postponedToDate>todayStr).length;
+  const cards = list.map(({f, r})=>{
+    const nd = f.postponedToDate, nt = f.postponedToTime;
+    const tag = nd<todayStr ? {t:'⚠️ فات ميعادها ولسه متسجلتش', bg:'#fee2e2', c:'#b91c1c'}
+              : nd===todayStr ? {t:'🔔 ميعادها النهارده', bg:'#dcfce7', c:'#15803d'}
+              : {t:'📆 قادمة', bg:'#e0f2fe', c:'#0369a1'};
+    const canRegister = nd<=todayStr;
+    const sup = (isOwner() && f.supervisorId) ? `<span class="sr-owner-badge" style="margin:8px 0 0;${supBadgeStyle(f.supervisorId)}">👤 ${esc(supervisorLabel(f.supervisorId))}</span>` : '';
+    return `<div class="fu-entry" style="border-right-color:#eab308;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div style="min-width:0;">
+          <div class="p-name">${esc(r.studentName)||'بدون اسم'}</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">👩‍🏫 ${esc(r.teacherName)||'—'} ${r.subject?'• '+esc(r.subject):''}</div>
+        </div>
+        <span class="badge" style="background:${tag.bg};color:${tag.c};font-size:10.5px;padding:4px 10px;white-space:nowrap;">${tag.t}</span>
+      </div>
+      <div class="pp-move">
+        <div><span>كانت يوم</span> <b>${esc(ppDayName(f.date))} ${esc(f.date)}</b> • ${esc(formatTime12(f.slotTime))}</div>
+        <div><span>اتأجلت إلى</span> <b>${esc(ppDayName(nd))} ${esc(nd)}</b> • ${esc(formatTime12(nt))}</div>
+      </div>
+      ${f.reason?`<div class="pp-reason">📝 السبب: ${esc(f.reason)}</div>`:''}
+      <div class="fu-status-row" style="margin-top:10px;">
+        ${canRegister?`<button class="fu-btn" style="background:#dcfce7;color:#15803d;" onclick="setFollowupStatus('${jsAttr(r.id)}','${jsAttr(nd)}','${jsAttr(nt)}','حضر')">✅ حضر</button>
+        <button class="fu-btn" style="background:#fee2e2;color:#b91c1c;" onclick="setFollowupStatus('${jsAttr(r.id)}','${jsAttr(nd)}','${jsAttr(nt)}','غاب')">❌ غاب</button>`:''}
+        <button class="fu-btn" style="background:#fef3c7;color:#b45309;" onclick="openPostponeModal('${jsAttr(r.id)}','${jsAttr(nd)}','${jsAttr(nt)}')">⏸ تأجيل تاني</button>
+      </div>
+      ${sup}
+    </div>`;
+  }).join('');
+  return `
+    <h1 class="page-title">⏳ التأجيلات</h1>
+    <div style="font-size:11.5px;color:var(--text-dim);margin-top:4px;">${isOwner()?'كل الحصص المؤجلة في الأكاديمية':'الحصص المؤجلة بتاعة طلابك'} - بتفضل هنا لحد ما تتسجل (حضر أو غاب)</div>
+    ${chips}
+    <div class="stat-row" style="grid-template-columns:repeat(3,1fr);margin:12px 0;">
+      <div class="stat-card"><div class="num" style="color:#b91c1c;">${overdue}</div><div class="lbl">فات ميعادها</div></div>
+      <div class="stat-card"><div class="num" style="color:#15803d;">${today}</div><div class="lbl">النهارده</div></div>
+      <div class="stat-card"><div class="num" style="color:#0369a1;">${upcoming}</div><div class="lbl">قادمة</div></div>
+    </div>
+    <div class="list">${cards || `<div class="empty">${ICON.empty}<div>مفيش حصص مؤجلة دلوقتي 🎉</div></div>`}</div>`;
+}
+// ============ نهاية التأجيلات ============
 function sessionCard(s){
   const student = DATA.students.find(x=>x.id===s.studentId);
   const teacher = DATA.teachers.find(x=>x.id===s.teacherId);
