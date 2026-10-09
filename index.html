@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261009210000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261009233000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -512,11 +512,22 @@ async function ownerToken(){
 }
 async function callSupervisorApi(payload){
   const token = await ownerToken();
-  const res = await fetch('/api/manage-supervisors', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ token, ...payload })
-  });
-  return res.json();
+  // === تعديل v11: مهلة للطلب + قراءة الرد كنص أولاً، حتى لا تبقى الشاشة في "جاري التحميل" إذا رجع السيرفر صفحة خطأ غير JSON ===
+  const ctrl = new AbortController();
+  const timer = setTimeout(()=>ctrl.abort(), 20000);
+  try{
+    const res = await fetch('/api/manage-supervisors', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ token, ...payload }), signal: ctrl.signal
+    });
+    const text = await res.text();
+    let data = null;
+    try{ data = JSON.parse(text); }catch(e){ data = null; }
+    if(data && typeof data === 'object') return data;
+    return { ok:false, error:`الخادم رجّع ردًا غير صالح (HTTP ${res.status}) - تأكد من نشر مجلد api/ على Vercel` };
+  }catch(e){
+    return { ok:false, error: (e && e.name === 'AbortError') ? 'انتهت مهلة الاتصال بالخادم' : 'تعذر الاتصال بالخادم' };
+  }finally{ clearTimeout(timer); }
 }
 async function loadSupervisorsList(){
   const box = document.getElementById('supervisorsBox');
@@ -533,7 +544,10 @@ async function loadSupervisorsList(){
     <div style="border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <div><b style="font-size:13px;">${esc(s.fullName||'بدون اسم')}</b><div style="font-size:11px;color:var(--text-dim);">${esc(s.email)}</div></div>
-        <button style="background:none;border:none;color:var(--coral);font-size:11px;" onclick="deleteSupervisor('${s.id}','${jsAttr(s.fullName||s.email)}')">حذف المشرفة</button>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <button style="background:none;border:none;color:#0369a1;font-size:11px;font-weight:700;" onclick="renameSupervisor('${s.id}','${jsAttr(s.fullName||'')}')">✏️ تعديل الاسم</button>
+          <button style="background:none;border:none;color:var(--coral);font-size:11px;" onclick="deleteSupervisor('${s.id}','${jsAttr(s.fullName||s.email)}')">حذف المشرفة</button>
+        </div>
       </div>
       <div style="max-height:150px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px;">
         ${DATA.teachers.filter(t=>!t.archived).map(t=>`<label style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;"><input type="checkbox" class="supTeacherChk_${s.id}" value="${t.id}" ${s.assignedTeacherIds.includes(t.id)?'checked':''}> ${esc(t.name)}</label>`).join('')}
@@ -551,6 +565,16 @@ async function deleteSupervisor(id, name){
   if(!window.confirm(`حذف المشرفة "${name}" نهائيًا؟`)) return;
   const result = await callSupervisorApi({ action:'delete', id });
   if(result.ok){ showToast('تم الحذف'); loadSupervisorsList(); } else showToast('⚠️ '+(result.error||'تعذر الحذف'));
+}
+// === تعديل v11: تعديل اسم المشرفة (للمالك فقط) - يحدّث profiles.full_name فقط دون مساس بالمعلمات المعيّنة ===
+async function renameSupervisor(id, currentName){
+  const input = window.prompt('الاسم الجديد للمشرفة:', currentName || '');
+  if(input === null) return;
+  const name = String(input).trim();
+  if(!name){ showToast('⚠️ الاسم لا يمكن أن يكون فارغًا'); return; }
+  const result = await callSupervisorApi({ action:'update', id, fullName: name });
+  if(result.ok){ showToast('✅ تم حفظ الاسم'); await loadSupervisorNames(); }
+  else showToast('⚠️ '+(result.error||'تعذر حفظ الاسم'));
 }
 async function createSupervisor(){
   const fullName = document.getElementById('f_newSupName').value.trim();
@@ -1173,7 +1197,9 @@ async function loadData(){
 let SUPERVISOR_NAMES = {};
 let OWNER_UID = '';
 let SUPERVISOR_STATE = 'loading'; // === تعديل: حالة تحميل أسماء المشرفات (loading / ok / failed) - تُستخدم في بطاقات الإحصائيات ===
+let SUP_NAMES_RETRIES = 0; // === تعديل v11: عدد محاولات إعادة تحميل أسماء المشرفات بعد الفشل (3 كحد أقصى) ===
 async function loadSupervisorNames(){
+  let loaded = false;
   try{
     OWNER_UID = (await getCurrentUserId()) || '';
     const result = await callSupervisorApi({ action:'list' });
@@ -1181,9 +1207,15 @@ async function loadSupervisorNames(){
       SUPERVISOR_NAMES = {};
       result.supervisors.forEach(sv=>{ SUPERVISOR_NAMES[sv.id] = sv.fullName || sv.email || 'مشرفة'; });
       SUPERVISOR_STATE = 'ok'; // === تعديل: تم تحميل أسماء المشرفات بنجاح ===
+      loaded = true;
+      SUP_NAMES_RETRIES = 0;
     }
   }catch(e){ /* لو تعذر الجلب تظهر الشارة بدون اسم */ }
   if(SUPERVISOR_STATE==='loading') SUPERVISOR_STATE = 'failed'; // === تعديل: لو فشل الجلب لا تبقى بطاقات الإحصائيات في حالة تحميل ===
+  if(!loaded && isOwner() && SUP_NAMES_RETRIES < 3){ // === تعديل v11: إعادة محاولة تلقائية بعد 4 ثوانٍ عند الفشل المؤقت ===
+    SUP_NAMES_RETRIES++;
+    setTimeout(loadSupervisorNames, 4000);
+  }
   render();
 }
 function supervisorLabel(id){
