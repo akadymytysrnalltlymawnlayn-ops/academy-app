@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261009120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261009210000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -498,7 +498,7 @@ async function enablePush(){
 async function sendTestNotif(){
   showToast('جاري الإرسال...');
   try{
-    const res = await fetch('/api/send-test');
+    const res = await fetch('/api/send-test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: await ownerToken() }) });
     const data = await res.json();
     if(data.ok){ showToast(`✅ اتبعت لـ ${data.success} جهاز`); }
     else { showToast('⚠️ ' + (data.error || 'فشل الإرسال')); console.log('نتيجة التشخيص:', data); }
@@ -655,6 +655,20 @@ function remUpcoming(now){
       out.push({ r, sl, start, off, notifyAt: start - REM_LEAD_MIN*60000, key: me+'|'+r.id+'|'+dateStr+'|'+sl.time });
     }
   }
+  // === إصلاح (التأجيلات): الحصص المؤجلة لهذه المشرفة (اليوم وغدًا) تُنبَّه قبل موعدها الجديد بنفس القاعدة ===
+  ppPendingList().forEach(({f, r})=>{
+    if(!r || r.archived || r.supervisorId !== me) return;
+    const tm = remParseTime(f.postponedToTime);
+    const dd = new Date(String(f.postponedToDate) + 'T00:00:00');
+    if(!tm || isNaN(dd)) return;
+    const dayStart = new Date(nd.getFullYear(), nd.getMonth(), nd.getDate()).getTime();
+    const tgtDay = new Date(dd.getFullYear(), dd.getMonth(), dd.getDate()).getTime();
+    const off = Math.round((tgtDay - dayStart) / 86400000);
+    if(off < 0 || off > 1) return;
+    const start = new Date(dd.getFullYear(), dd.getMonth(), dd.getDate(), tm[0], tm[1], 0, 0).getTime();
+    if(start <= now) return;
+    out.push({ r, sl: { day: DAYS[PP_WEEKDAY[dd.getDay()]], time: f.postponedToTime, postponed: true }, start, off, notifyAt: start - REM_LEAD_MIN*60000, key: me+'|'+r.id+'|'+f.postponedToDate+'|'+f.postponedToTime });
+  });
   return out;
 }
 
@@ -708,7 +722,7 @@ function remGroupTexts(group, now){
     const r = first.r;
     return {
       title: 'حصتك تبدأ بعد ' + remMinutesText(mins),
-      lines: [ (r.studentName||'بدون اسم') + (r.subject ? ' • ' + r.subject : ''), 'الساعة ' + timeTxt + (r.teacherName ? ' • ' + r.teacherName : '') ]
+      lines: [ (r.studentName||'بدون اسم') + (r.subject ? ' • ' + r.subject : '') + (first.sl.postponed ? ' • حصة مؤجلة' : ''), 'الساعة ' + timeTxt + (r.teacherName ? ' • ' + r.teacherName : '') ]
     };
   }
   const names = group.map(g=>g.r.studentName||'بدون اسم');
@@ -864,7 +878,7 @@ async function onRemBellClick(){
 }
 // === تعديل: إشعارات الخلفية للمشرفة (Web Push من السيرفر) - تصلها حتى لو التطبيق مغلق ===
 // يُسجَّل الجهاز في جدول منفصل (supervisor_push_subscriptions) عبر /api/register-push فلا يتأثر نظام إشعارات المالك.
-async function remSubscribePush(){
+async function remSubscribePush(silent){
   _remPushErr = '';
   if(!remIsSupervisor()) return false;
   if(!('serviceWorker' in navigator) || !('PushManager' in window)){ _remPushErr = 'المتصفح لا يدعم إشعارات الخلفية'; _remPushOn = false; return false; }
@@ -876,7 +890,7 @@ async function remSubscribePush(){
     let sub = await reg.pushManager.getSubscription();
     if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
     const token = await ownerToken();
-    const res = await fetch('/api/register-push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, subscription: sub.toJSON() }) });
+    const res = await fetch('/api/register-push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, subscription: sub.toJSON(), action: silent ? 'refresh' : 'enable' }) });
     const data = await res.json().catch(()=>null);
     if(data && data.ok){ _remPushOn = true; return true; }
     _remPushErr = (data && data.error) || ('HTTP ' + res.status);
@@ -889,7 +903,7 @@ function remMaybeResubscribe(){
   if(_remResubDone || !remIsSupervisor()) return;
   if(!('Notification' in window) || Notification.permission !== 'granted') return;
   _remResubDone = true;
-  remSubscribePush();
+  remSubscribePush(true);
 }
 // دعوة لطيفة تظهر مرة واحدة فقط لكل جهاز لتفعيل الإذن
 function remMaybePrompt(){
@@ -1000,6 +1014,30 @@ async function initApp(){
     loadData();
     subscribeRealtime();
 }
+// === مزامنة المعلمات: المشرفة ترى المعلمات المعيّنة لها فقط (profiles.assigned_teacher_ids) ===
+function visibleTeachers(list){
+  if(!CURRENT_PROFILE || CURRENT_PROFILE.role !== 'supervisor') return list;
+  const ids = new Set(CURRENT_PROFILE.assigned_teacher_ids || []);
+  return list.filter(t => ids.has(t.id));
+}
+// === فصل الأجر: الأجور في جدول teacher_finance (للمالك فقط) وتُدمج في قائمة المعلمات ===
+function applyFinance(list, fin){
+  const m = new Map(((fin && fin.data) || []).map(r => [String(r.teacher_id), r.salary || '']));
+  list.forEach(t => { if (m.has(String(t.id))) t.salary = m.get(String(t.id)); });
+  return list;
+}
+function onFinanceChange(p){
+  if(!CURRENT_PROFILE || CURRENT_PROFILE.role !== 'owner' || !p.new) return;
+  const t = DATA.teachers.find(x => String(x.id) === String(p.new.teacher_id));
+  if(t){ t.salary = p.new.salary || ''; scheduleRealtimeRender(); }
+}
+// تغيّر تعيين المعلمات للمشرفة من المالك يصل فورًا: نحدّث بيانات المشرفة ونعيد جلب المعلمات المسموح لها
+function onOwnProfileChange(p){
+  if(!CURRENT_PROFILE || !p.new || p.new.id !== CURRENT_PROFILE.id) return;
+  CURRENT_PROFILE.assigned_teacher_ids = p.new.assigned_teacher_ids || [];
+  CURRENT_PROFILE.full_name = p.new.full_name || CURRENT_PROFILE.full_name;
+  refreshCriticalData();
+}
 function isOwner(){ return !!(CURRENT_PROFILE && CURRENT_PROFILE.role === 'owner'); } // === إصلاح أمني: مغلقة افتراضيًا - لا صلاحية مالك بدون ملف شخصي بدور owner ===
 // === تعديل: دالة جديدة - معرّف المستخدم الحالي (من الملف الشخصي، وإلا من الدخول مباشرة) ===
 async function getCurrentUserId(){
@@ -1021,7 +1059,7 @@ function mapStudent(r){ return {id:r.id, name:r.name, phone:r.phone||'', country
 function mapTeacher(r){ return {id:r.id, name:r.name, phone:r.phone||'', salary:r.salary||'', subjects:r.subjects||'', meetLink:r.meet_link||'', notes:r.notes||'', archived:!!r.archived}; }
 function mapSession(r){ return {id:r.id, studentId:r.student_id||'', studentName:r.student_name||'', teacherId:r.teacher_id||'', subjects:r.subjects||[], slots:r.slots||[], status:r.status, link:r.link||'', archived:!!r.archived}; }
 function studentToDb(s){ return {id:s.id, name:s.name, phone:s.phone||null, country:s.country||null, status:s.status, payment:s.payment, subjects:s.subjects||[], teacher_ids:s.teacherIds||[], notes:s.notes||null, archived:!!s.archived}; }
-function teacherToDb(t){ return {id:t.id, name:t.name, phone:t.phone||null, salary:t.salary||null, subjects:t.subjects||'', meet_link:t.meetLink||null, notes:t.notes||null, archived:!!t.archived}; }
+function teacherToDb(t){ return {id:t.id, name:t.name, phone:t.phone||null, subjects:t.subjects||'', meet_link:t.meetLink||null, notes:t.notes||null, archived:!!t.archived}; }
 function sessionToDb(s){ return {id:s.id, student_id:s.studentId||null, student_name:s.studentName||null, teacher_id:s.teacherId||null, subjects:s.subjects||[], slots:s.slots||[], status:s.status, link:s.link||null, archived:!!s.archived}; }
 function mapTrial(r){ return {id:r.id, studentName:r.student_name||'', phone:r.phone||'', subject:r.subject||'', teacherName:r.teacher_name||'', schedule:r.schedule||'', slots:r.slots||[], status:r.status||'مجدولة', link:r.link||'', createdAt:r.created_at||'', archived:!!r.archived}; }
 // === تعديل: دوال جديدة - تحويل بيانات متابعات الحضور ===
@@ -1100,7 +1138,7 @@ async function loadData(){
     const isSup = !!(CURRENT_PROFILE && CURRENT_PROFILE.role === 'supervisor');
     const SKIP = () => Promise.resolve({ data: [], error: null });
     const TEACHER_COLS_SUP = 'id,name,phone,subjects,meet_link,archived';
-    const [stu, tea, ses, subs, trl, srec, att, fol] = await Promise.all([
+    const [stu, tea, ses, subs, trl, srec, att, fol, fin] = await Promise.all([
       isSup ? SKIP() : allRows(()=>sb.from('students').select('*')),
       isSup ? allRows(()=>sb.from('teachers').select(TEACHER_COLS_SUP)) : allRows(()=>sb.from('teachers').select('*')),
       isSup ? SKIP() : allRows(()=>sb.from('sessions').select('*')),
@@ -1108,7 +1146,8 @@ async function loadData(){
       isSup ? SKIP() : allRows(()=>sb.from('trials').select('*').order('created_at', {ascending:false})),
       allRows(mkSrecQuery), // === تعديل: كان هنا الاستعلام المباشر على student_records ===
       isSup ? SKIP() : allRows(()=>sb.from('attendance_log').select('*').order('attend_date', {ascending:false})),
-      allRows(mkFolQuery) // === تعديل: استعلام متابعات الحضور والتأجيلات ===
+      allRows(mkFolQuery), // === تعديل: استعلام متابعات الحضور والتأجيلات ===
+      isSup ? SKIP() : allRows(()=>sb.from('teacher_finance').select('*')) // === فصل الأجر: للمالك فقط ===
     ]);
     if(stu.error){ showToast("تعذر تحميل البيانات: " + dbErrorText(stu.error)); setCloudStatus('error'); hideBootSplash(); return; }
     // === إصلاح: أخطاء التحميل تظهر للمستخدم بدل أن تبقى القوائم فارغة بصمت (مثل رفض RLS لجدول التأجيلات) ===
@@ -1116,7 +1155,7 @@ async function loadData(){
       .filter(([,r]) => r && r.error).map(([n,r]) => n + ' (' + dbErrorText(r.error) + ')');
     if(loadErrs.length){ showToast('⚠️ تعذر تحميل: ' + loadErrs.join('، ')); console.error('loadData errors:', loadErrs); }
     DATA.students = (stu.data||[]).map(mapStudent);
-    DATA.teachers = (tea.data||[]).map(mapTeacher);
+    DATA.teachers = applyFinance(visibleTeachers((tea.data||[]).map(mapTeacher)), fin);
     DATA.sessions = (ses.data||[]).map(mapSession);
     DATA.subjects = (subs.data||[]).map(r=>r.name);
     DATA.trials = (trl.data||[]).map(mapTrial);
@@ -1166,6 +1205,8 @@ function subscribeRealtime(){
     .on('postgres_changes', {event:'*', schema:'public', table:'student_records'}, p=>syncEntity('student_records', mapStudentRecord, p))
     .on('postgres_changes', {event:'*', schema:'public', table:'attendance_log'}, p=>syncEntity('attendance', mapAttendance, p))
     .on('postgres_changes', {event:'*', schema:'public', table:'class_followups'}, p=>syncEntity('followups', mapFollowup, p)) // === تعديل: تحديث لحظي لمتابعات الحضور ===
+    .on('postgres_changes', {event:'*', schema:'public', table:'teacher_finance'}, p=>onFinanceChange(p))
+    .on('postgres_changes', {event:'UPDATE', schema:'public', table:'profiles'}, p=>onOwnProfileChange(p))
     .subscribe((status)=>{
       if(ch !== _rtChannel) return; // قناة قديمة تم استبدالها - نتجاهلها
       if(status === 'SUBSCRIBED'){
@@ -1180,22 +1221,26 @@ function subscribeRealtime(){
     });
   _rtChannel = ch;
 }
-// === إصلاح (مزامنة): تحديث احتياطي دوري للبيانات الحرجة (الطلاب + المتابعات والتأجيلات) حتى لو تعطّل الاتصال اللحظي ===
+// === إصلاح (مزامنة): تحديث احتياطي دوري للبيانات الحرجة (الطلاب + المتابعات والتأجيلات + المعلمات) حتى لو تعطّل الاتصال اللحظي ===
 async function refreshCriticalData(){
   if(!CURRENT_PROFILE || document.hidden) return;
   try{
     const isSup = CURRENT_PROFILE.role === 'supervisor';
     const mkS = ()=>{ let q = sb.from('student_records').select('*').order('created_at'); if(isSup) q = q.eq('supervisor_id', CURRENT_PROFILE.id); return q; };
     const mkF = ()=>{ let q = sb.from('class_followups').select('*').order('attend_date', {ascending:false}); if(isSup) q = q.eq('supervisor_id', CURRENT_PROFILE.id); return q; };
-    const [srec, fol] = await Promise.all([allRows(mkS), allRows(mkF)]);
+    const mkT = ()=> isSup ? sb.from('teachers').select('id,name,phone,subjects,meet_link,archived') : sb.from('teachers').select('*');
+    const mkFin = ()=> sb.from('teacher_finance').select('*');
+    const [srec, fol, tea, fin] = await Promise.all([allRows(mkS), allRows(mkF), allRows(mkT), isSup ? Promise.resolve({ data: [], error: null }) : allRows(mkFin)]);
     if(srec.error || fol.error) return; // نحتفظ بالبيانات الحالية ولا نمسحها عند خطأ مؤقت
     const nSrec = (srec.data||[]).map(mapStudentRecord), nFol = (fol.data||[]).map(mapFollowup);
+    const nTea = tea.error ? null : applyFinance(visibleTeachers((tea.data||[]).map(mapTeacher)), fin);
     _lastSyncAt = Date.now();
-    const sig = JSON.stringify([nSrec, nFol]);
+    const sig = JSON.stringify([nSrec, nFol, nTea]);
     if(sig === _critSig) return; // لا تغيير: لا نعيد الرسم
     _critSig = sig;
     DATA.student_records = nSrec;
     DATA.followups = nFol;
+    if(nTea) DATA.teachers = nTea;
     scheduleRealtimeRender();
   }catch(e){ /* المحاولة القادمة تعوّض */ }
 }
@@ -1213,6 +1258,8 @@ function syncEntity(type, mapper, payload){
     if((type==='student_records' || type==='followups') && !isOwner() && payload.new.supervisor_id !== (CURRENT_PROFILE && CURRENT_PROFILE.id)) return;
     const src = (isSupRt && type === 'teachers') ? Object.assign({}, payload.new, { salary: null }) : payload.new; // === إصلاح أمني: الراتب لا يصل للمشرفة ===
     const row = mapper(src);
+    // === فصل الأجر: حدث المعلمات بدون عمود الأجر لا يمسح الأجر المعروف للمالك ===
+    if (type === 'teachers' && !isSupRt && !('salary' in payload.new)) { const prevT = arr.find(x => x.id === row.id); if (prevT) row.salary = prevT.salary; }
     const idx = arr.findIndex(x=>x.id===row.id);
     if(idx>-1) arr[idx]=row; else arr.push(row);
   }
@@ -2333,6 +2380,9 @@ async function saveTeacher(id){ if(!isOwner()) return showToast('هذا الإج
   };
   const { error } = await sb.from('teachers').upsert(teacherToDb(obj));
   if(error){ showToast('تعذر الحفظ'); return; }
+  // === فصل الأجر: الأجر يُحفظ في جدول المالك فقط ===
+  const { error: fErr } = await sb.from('teacher_finance').upsert({ teacher_id: String(obj.id), salary: obj.salary ? String(obj.salary) : null }, { onConflict: 'teacher_id' });
+  if(fErr){ showToast('تم حفظ المعلم لكن تعذر حفظ الأجر: ' + dbErrorText(fErr)); }
   const idx = DATA.teachers.findIndex(x=>x.id===id);
   if(idx>-1) DATA.teachers[idx]=obj; else DATA.teachers.push(obj);
   closeModal(); render(); showToast('تم حفظ المعلم');
@@ -2395,8 +2445,9 @@ function renderDaySchedule(){
         });
     });
     // === تعديل (التأجيلات): الحصص المؤجلة إلى هذا التاريخ تظهر هنا بشارة صفراء ===
-    ppInForDate(cardDate).forEach(({f, r}) => {
-        recordItems.push({ t: f.postponedToTime, html: recordClassCard(r, { day, time: f.postponedToTime }, cardDate, f) });
+    // === إصلاح (التأجيلات): نسخة الحصة المؤجلة تظهر في تبويب يوم نقلها بتاريخها الفعلي (مثال: من الجمعة للسبت القادم) ===
+    ppCopiesForTab(scheduleDay).forEach(({f, r}) => {
+        recordItems.push({ t: f.postponedToTime, html: recordClassCard(r, { day, time: f.postponedToTime }, f.postponedToDate, f) });
     });
     _attMap = null; // === تعديل: تفريغ الخريطة المؤقتة بعد بناء البطاقات ===
     // === تعديل: دمج بطاقات الحصص القديمة مع بطاقات بيانات الطلاب وترتيبها بالوقت ===
@@ -2601,6 +2652,24 @@ function ppInForDate(date){
   });
   return out;
 }
+// === إصلاح (التأجيلات): نسخ الحصص المؤجلة التي يطابق يومها الأسبوعي التبويب، ويقع تاريخها ضمن ±6 أيام من اليوم ===
+function ppCopiesForTab(idx){
+  const out = [];
+  const t0 = new Date(); t0.setHours(0,0,0,0);
+  DATA.followups.forEach(f=>{
+    if(f.status!=='تأجيل' || !f.postponedToDate || !f.postponedToTime) return;
+    const d = new Date(f.postponedToDate+'T00:00:00');
+    if(isNaN(d)) return;
+    const diff = Math.round((d - t0) / 86400000);
+    if(diff < -6 || diff > 6) return;
+    if(PP_WEEKDAY[d.getDay()] !== idx) return;
+    const r = DATA.student_records.find(x=>x.id===f.recordId);
+    if(!r || r.archived) return;
+    if(ppAway(r.id, f.postponedToDate, f.postponedToTime)) return;
+    out.push({ f, r });
+  });
+  return out;
+}
 function ppBadge(hop){
   if(!hop) return '';
   return `<div style="margin-top:6px;"><span class="pp-badge">⏳ مؤجلة من يوم ${esc(ppDayName(hop.date))} ${esc(hop.date)}</span></div>${hop.reason?`<div class="pp-reason">📝 السبب: ${esc(hop.reason)}</div>`:''}`;
@@ -2689,7 +2758,7 @@ function pagePostponed(){
     const tag = nd<todayStr ? {t:'⚠️ فات ميعادها ولسه متسجلتش', bg:'#fee2e2', c:'#b91c1c'}
               : nd===todayStr ? {t:'🔔 ميعادها النهارده', bg:'#dcfce7', c:'#15803d'}
               : {t:'📆 قادمة', bg:'#e0f2fe', c:'#0369a1'};
-    const canRegister = nd<=todayStr;
+    const canRegister = true; // === إصلاح (التأجيلات): نفس أزرار الجدول الأساسي دائماً (حضر / غاب / تأجيل مرة أخرى) ===
     const sup = (isOwner() && f.supervisorId) ? `<span class="sr-owner-badge" style="margin:8px 0 0;${supBadgeStyle(f.supervisorId)}">👤 ${esc(supervisorLabel(f.supervisorId))}</span>` : '';
     return `<div class="fu-entry" style="border-right-color:#eab308;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
@@ -3478,6 +3547,8 @@ function importData(e){ if(!isOwner()) return showToast('هذا الإجراء �
       const sessions = (parsed.sessions||[]).map(s=>({...s, id:remap(s.id), studentId:remap(s.studentId), teacherId:remap(s.teacherId)}));
       if(students.length) await sb.from('students').upsert(students.map(studentToDb));
       if(teachers.length) await sb.from('teachers').upsert(teachers.map(teacherToDb));
+      const finRows = teachers.filter(t => String(t.salary == null ? '' : t.salary).trim() !== '').map(t => ({ teacher_id: String(t.id), salary: String(t.salary) }));
+      if(finRows.length) await sb.from('teacher_finance').upsert(finRows, { onConflict: 'teacher_id' });
       if(sessions.length) await sb.from('sessions').upsert(sessions.map(sessionToDb));
       if(parsed.subjects && parsed.subjects.length) await sb.from('subjects').upsert(parsed.subjects.map(name=>({name})), {onConflict:'name'});
       await loadData();
@@ -3601,5 +3672,5 @@ document.addEventListener('click', e=>{
 });
 
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a47b14723a7ce1f4',t:'MTc5MTUyNDczMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
