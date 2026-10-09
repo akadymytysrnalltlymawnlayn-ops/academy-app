@@ -39,13 +39,17 @@ module.exports = async (req, res) => {
           if (sl.day !== d.dayAr) continue;
           const deltaMin = (S.zonedToEpoch(d.dateStr, hhmm) - nowMs) / 60000;
           if (deltaMin <= 0 || deltaMin > LEAD_MIN) continue;
-          items.push({ type, id: obj.id, name, subjects, hhmm, key: `${type}-${obj.id}-${d.dateStr}-${hhmm}` });
+          items.push({ type, id: obj.id, name, subjects, hhmm, startsInMin: Math.round(deltaMin * 10) / 10, key: `${type}-${obj.id}-${d.dateStr}-${hhmm}` });
         }
       }
     };
     sessions.forEach(s => consider('session', s, s.student_name, (s.subjects || []).join('، ')));
     trials.forEach(t => consider('trial', t, t.student_name, t.subject || ''));
 
+    // وضع الاختبار: يعرض ما كان سيُرسل بدون أي إرسال أو حجز (?dry=1)
+    if (req.query && req.query.dry) {
+      return res.status(200).json({ ok: true, dry: true, matched: items.length, items: items.map(i => ({ type: i.type, name: i.name, hhmm: i.hhmm, startsInMin: i.startsInMin, key: i.key })) });
+    }
     if (!items.length) return res.status(200).json({ ok: true, message: 'لا توجد حصص خلال 10 دقائق', matched: 0 });
 
     let sentCount = 0, failed = 0, skipped = 0;
