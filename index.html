@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261012120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261021120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -563,11 +563,13 @@ async function loadSupervisorsList(){
         <div><b style="font-size:13px;">${esc(s.fullName||'بدون اسم')}</b><div style="font-size:11px;color:var(--text-dim);">${esc(s.email)}</div></div>
         <div style="display:flex;gap:12px;align-items:center;">
           <button style="background:none;border:none;color:#0369a1;font-size:11px;font-weight:700;" onclick="renameSupervisor('${s.id}','${jsAttr(s.fullName||'')}')">✏️ تعديل الاسم</button>
+          <button style="background:none;border:none;color:#b45309;font-size:11px;font-weight:700;" onclick="resetSupervisorPassword('${s.id}','${jsAttr(s.fullName||s.email)}')">🔑 تغيير كلمة السر</button>
           <button style="background:none;border:none;color:var(--coral);font-size:11px;" onclick="deleteSupervisor('${s.id}','${jsAttr(s.fullName||s.email)}')">حذف المشرفة</button>
         </div>
       </div>
       <div style="max-height:150px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px;">
-        ${DATA.teachers.filter(t=>!t.archived).map(t=>`<label style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;"><input type="checkbox" class="supTeacherChk_${s.id}" value="${t.id}" ${s.assignedTeacherIds.includes(t.id)?'checked':''}> ${esc(t.name)}</label>`).join('')}
+        <label style="display:flex;align-items:center;gap:6px;padding:4px 0 8px;margin-bottom:4px;font-size:12px;font-weight:800;border-bottom:1px dashed var(--line);cursor:pointer;"><input type="checkbox" class="supTeacherAll_${s.id}" ${(DATA.teachers.filter(t=>!t.archived).length>0 && DATA.teachers.filter(t=>!t.archived).every(t=>s.assignedTeacherIds.includes(t.id)))?'checked':''} onchange="toggleAllSupTeachers('${s.id}', this.checked)"> اختيار الكل</label>
+        ${DATA.teachers.filter(t=>!t.archived).map(t=>`<label style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;"><input type="checkbox" class="supTeacherChk_${s.id}" value="${t.id}" ${s.assignedTeacherIds.includes(t.id)?'checked':''} onchange="syncSupTeacherAll('${s.id}')"> ${esc(t.name)}</label>`).join('')}
       </div>
       <button class="icon-btn" style="width:100%;background:#e0f2fe;color:#0369a1;font-weight:700;" onclick="saveSupervisorTeachers('${s.id}','${jsAttr(s.fullName||'')}')">💾 حفظ المعلمات</button>
     </div>
@@ -3588,7 +3590,8 @@ function pageSettings(){
         </div>
         <div class="field"><label>المعلمات التابعة لها</label>
           <div id="newSupTeachersBox" style="max-height:160px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:8px;">
-            ${DATA.teachers.filter(t=>!t.archived).map(t=>`<label style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;"><input type="checkbox" class="newSupTeacherChk" value="${t.id}"> ${esc(t.name)}</label>`).join('')}
+            <label style="display:flex;align-items:center;gap:6px;padding:4px 0 8px;margin-bottom:4px;font-size:12px;font-weight:800;border-bottom:1px dashed var(--line);cursor:pointer;"><input type="checkbox" id="newSupTeacherAll" onchange="toggleAllNewSupTeachers(this.checked)"> اختيار الكل</label>
+            ${DATA.teachers.filter(t=>!t.archived).map(t=>`<label style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;"><input type="checkbox" class="newSupTeacherChk" value="${t.id}" onchange="syncNewSupTeacherAll()"> ${esc(t.name)}</label>`).join('')}
           </div>
         </div>
         <button class="icon-btn" style="width:100%;background:linear-gradient(135deg,#14b8a6,#0d9488);color:#fff;font-weight:700;border:none;padding:10px;" onclick="createSupervisor()">➕ إنشاء المشرفة</button>
@@ -3950,6 +3953,77 @@ function pageArchive(){
 }
 // === نهاية إضافات v13 ===
 
+// =====================================================================
+// === v14: تغيير كلمة سر المشرفة (مع طرد كل الجلسات) + اختيار الكل
+// كل الكود التالي إضافي بالكامل ولا يعدّل أو يلغي أي وظيفة قديمة سابقة.
+// =====================================================================
+
+function toggleAllSupTeachers(id, checked){
+  if(!isOwner()) return;
+  document.querySelectorAll('.supTeacherChk_'+id).forEach(el => { el.checked = !!checked; });
+  const all = document.querySelector('.supTeacherAll_'+id);
+  if(all) all.checked = !!checked;
+}
+
+function syncSupTeacherAll(id){
+  const boxes = [...document.querySelectorAll('.supTeacherChk_'+id)];
+  const all = document.querySelector('.supTeacherAll_'+id);
+  if(!all || !boxes.length) return;
+  all.checked = boxes.every(el => el.checked);
+}
+
+function toggleAllNewSupTeachers(checked){
+  if(!isOwner()) return;
+  document.querySelectorAll('.newSupTeacherChk').forEach(el => { el.checked = !!checked; });
+  const all = document.getElementById('newSupTeacherAll');
+  if(all) all.checked = !!checked;
+}
+
+function syncNewSupTeacherAll(){
+  const boxes = [...document.querySelectorAll('.newSupTeacherChk')];
+  const all = document.getElementById('newSupTeacherAll');
+  if(!all || !boxes.length) return;
+  all.checked = boxes.every(el => el.checked);
+}
+
+async function resetSupervisorPassword(id, name){
+  if(!isOwner()){ showToast('هذه العملية للمالك فقط'); return; }
+  if(!window.confirm(`تغيير كلمة السر للمشرفة "${name}"؟\nهتخرج فورًا من كل الأجهزة والجلسات المفتوحة، والباسورد القديم يبطل نهائي.`)) return;
+  const p1 = window.prompt('كلمة السر الجديدة (6 حروف على الأقل):', '');
+  if(p1 === null) return;
+  const password = String(p1);
+  if(password.length < 6){ showToast('⚠️ كلمة السر لازم تكون 6 حروف على الأقل'); return; }
+  const p2 = window.prompt('أعد كتابة كلمة السر للتأكيد:', '');
+  if(p2 === null) return;
+  if(password !== String(p2)){ showToast('⚠️ كلمتا السر غير متطابقتين'); return; }
+  showToast('جاري تغيير كلمة السر...');
+  const result = await callSupervisorApi({ action:'resetPassword', id, password });
+  if(result.ok) showToast('✅ تم تغيير كلمة السر — المشرفة هتحتاج تدخل بالباسورد الجديد');
+  else showToast('⚠️ '+(result.error||'تعذر تغيير كلمة السر'));
+}
+
+// فحص دوري: لو المالك غيّر كلمة السر (أو اتلغت الجلسة من السيرفر) المشرفة تخرج فورًا حتى لو التطبيق كان مفتوح
+async function yusranaCheckSessionAlive(){
+  try{
+    const { data } = await sb.auth.getSession();
+    if(!data || !data.session) return;
+    const { error } = await sb.auth.getUser();
+    if(!error) return;
+    const msg = String((error && (error.message || error.code)) || '');
+    const status = error && error.status;
+    if(status === 401 || status === 403 || /session/i.test(msg) || /invalid/i.test(msg) || /jwt/i.test(msg) || /banned/i.test(msg) || /not authenticated/i.test(msg)){
+      try{ await sb.auth.signOut({ scope:'local' }); }catch(e){}
+      location.reload();
+    }
+  }catch(e){}
+}
+if(!window.__ysrSessWatch){
+  window.__ysrSessWatch = setInterval(yusranaCheckSessionAlive, 12000);
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState === 'visible') yusranaCheckSessionAlive(); });
+}
+// === نهاية إضافات v14 ===
+
+
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a49914cb8e72f9b5',t:'MTc5MTgzOTMyMA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
