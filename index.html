@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ش<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261021120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261022120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -563,7 +563,7 @@ async function loadSupervisorsList(){
         <div><b style="font-size:13px;">${esc(s.fullName||'بدون اسم')}</b><div style="font-size:11px;color:var(--text-dim);">${esc(s.email)}</div></div>
         <div style="display:flex;gap:12px;align-items:center;">
           <button style="background:none;border:none;color:#0369a1;font-size:11px;font-weight:700;" onclick="renameSupervisor('${s.id}','${jsAttr(s.fullName||'')}')">✏️ تعديل الاسم</button>
-          <button style="background:none;border:none;color:#b45309;font-size:11px;font-weight:700;" onclick="resetSupervisorPassword('${s.id}','${jsAttr(s.fullName||s.email)}')">🔑 تغيير كلمة السر</button>
+          <button style="background:none;border:none;color:#b45309;font-size:11px;font-weight:700;" onclick="openResetSupPassModal('${s.id}','${jsAttr(s.fullName||s.email)}')">🔑 تغيير كلمة السر</button>
           <button style="background:none;border:none;color:var(--coral);font-size:11px;" onclick="deleteSupervisor('${s.id}','${jsAttr(s.fullName||s.email)}')">حذف المشرفة</button>
         </div>
       </div>
@@ -2393,13 +2393,13 @@ async function doConvertTrial(id){ if(!isOwner()) return showToast('هذا ال�
 // ============ نهاية الحصص التجريبية ============
 
 function teacherCard(t){
-  const studentCount = DATA.students.filter(s=>!s.archived && (s.teacherIds||[]).includes(t.id)).length;
+  const studentCount = isOwner() ? teacherStudentCount(t) : 0;
   return `<div class="p-card ${t.archived?'archived':''}">
     ${isOwner()?`<button class="corner-del" title="حذف" onclick="event.stopPropagation();deleteRecord('teachers','${t.id}','${jsAttr(t.name)}')">${ICON.trash}</button>`:''}
     <div class="p-top">
       <div class="avatar">${t.name?esc(t.name[0]):'م'}</div>
       <div><div class="p-name">${esc(t.name)}<small>${esc(t.subjects)||'—'}</small></div></div>
-      <span style="margin-right:auto;background:#e0f2fe;color:#0369a1;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;white-space:nowrap;">عدد الطلاب: ${studentCount}</span>
+      ${isOwner()?`<span style="margin-right:auto;background:#e0f2fe;color:#0369a1;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;white-space:nowrap;">عدد الطلاب: ${studentCount}</span>`:''}
     </div>
     <!-- === v13: رقم التليفون يتحوّل لرابط واتساب مباشر بمجرد الضغط عليه === -->
     ${t.phone?`<div class="tag">📱 <button onclick="event.stopPropagation();waOpen('${jsAttr(t.phone)}','')" style="border:none;background:none;padding:0;color:var(--teal-dark);font-weight:800;font-size:11px;cursor:pointer;direction:ltr;" title="افتح محادثة واتساب فورًا">${esc(t.phone)}</button></div>`:''}
@@ -3996,10 +3996,7 @@ async function resetSupervisorPassword(id, name){
   const p2 = window.prompt('أعد كتابة كلمة السر للتأكيد:', '');
   if(p2 === null) return;
   if(password !== String(p2)){ showToast('⚠️ كلمتا السر غير متطابقتين'); return; }
-  showToast('جاري تغيير كلمة السر...');
-  const result = await callSupervisorApi({ action:'resetPassword', id, password });
-  if(result.ok) showToast('✅ تم تغيير كلمة السر — المشرفة هتحتاج تدخل بالباسورد الجديد');
-  else showToast('⚠️ '+(result.error||'تعذر تغيير كلمة السر'));
+  await applySupervisorPassword(id, password);
 }
 
 // فحص دوري: لو المالك غيّر كلمة السر (أو اتلغت الجلسة من السيرفر) المشرفة تخرج فورًا حتى لو التطبيق كان مفتوح
@@ -4023,7 +4020,81 @@ if(!window.__ysrSessWatch){
 }
 // === نهاية إضافات v14 ===
 
+// =====================================================================
+// === v15: عدد طلاب المعلم للمالك فقط + إصلاح حفظ كلمة سر المشرفة
+// كل الكود التالي إضافي بالكامل ولا يعدّل أو يلغي أي وظيفة قديمة سابقة.
+// =====================================================================
+
+function teacherStudentCount(t){
+  if(!t) return 0;
+  const key = String(t.name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const seen = new Set();
+  const add = (name, phone) => {
+    const p = String(phone || '').replace(/\D+/g, '');
+    const n = String(name || '').trim().toLowerCase();
+    if(!p && !n) return;
+    seen.add(p ? ('p:' + p) : ('n:' + n));
+  };
+  (DATA.student_records || []).forEach(r => {
+    if(r.archived) return;
+    const tn = String(r.teacherName || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    if(!key || tn !== key) return;
+    add(r.studentName, r.studentPhone);
+  });
+  (DATA.students || []).forEach(s => {
+    if(s.archived) return;
+    if(!(s.teacherIds || []).includes(t.id)) return;
+    add(s.name, s.phone);
+  });
+  return seen.size;
+}
+
+function openResetSupPassModal(id, name){
+  if(!isOwner()){ showToast('هذه العملية للمالك فقط'); return; }
+  const box = document.getElementById('modalBody');
+  if(!box){ resetSupervisorPassword(id, name); return; }
+  box.innerHTML = `
+    <h3>🔑 تغيير كلمة السر</h3>
+    <p style="font-size:12px;color:var(--text-dim);line-height:1.85;margin:0 0 12px;">المشرفة: <b>${esc(name || '')}</b><br>بعد الحفظ هتخرج فورًا من كل الأجهزة والجلسات المفتوحة، والباسورد القديم يبطل نهائي.</p>
+    <div class="field"><label>كلمة السر الجديدة</label><input id="f_supNewPass" type="text" placeholder="6 حروف على الأقل" autocomplete="new-password"></div>
+    <div class="field"><label>تأكيد كلمة السر</label><input id="f_supNewPass2" type="text" placeholder="أعيدي كتابة كلمة السر" autocomplete="new-password"></div>
+    <div class="modal-actions">
+      <button class="save" onclick="confirmResetSupervisorPassword('${id}')">حفظ كلمة السر</button>
+      <button class="cancel" onclick="closeModal()">إلغاء</button>
+    </div>`;
+  openModal();
+  setTimeout(()=>{ const el = document.getElementById('f_supNewPass'); if(el) el.focus(); }, 50);
+}
+
+async function confirmResetSupervisorPassword(id){
+  if(!isOwner()){ showToast('هذه العملية للمالك فقط'); return; }
+  const p1 = document.getElementById('f_supNewPass');
+  const p2 = document.getElementById('f_supNewPass2');
+  const password = p1 ? String(p1.value) : '';
+  const again = p2 ? String(p2.value) : '';
+  if(password.length < 6){ showToast('⚠️ كلمة السر لازم تكون 6 حروف على الأقل'); return; }
+  if(password !== again){ showToast('⚠️ كلمتا السر غير متطابقتين'); return; }
+  await applySupervisorPassword(id, password);
+}
+
+async function applySupervisorPassword(id, password){
+  showToast('جاري تغيير كلمة السر...');
+  try{
+    const result = await callSupervisorApi({ action:'resetPassword', id, password });
+    if(result && result.ok){
+      try{ closeModal(); }catch(e){}
+      showToast('✅ تم تغيير كلمة السر — المشرفة هتحتاج تدخل بالباسورد الجديد');
+    } else {
+      showToast('⚠️ ' + ((result && result.error) || 'تعذر تغيير كلمة السر'));
+    }
+  }catch(e){
+    showToast('⚠️ تعذر تغيير كلمة السر: ' + (e && e.message ? String(e.message).slice(0, 120) : 'خطأ غير متوقع'));
+  }
+}
+// === نهاية إضافات v15 ===
+
+
 
 </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e3af5fc809e191',t:'MTc5MjYyMTU5OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
