@@ -1,4 +1,4 @@
-ش<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261022120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261023120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -314,6 +314,23 @@ html.has-session #authScreen{display:none;}
 .pay-legacy{margin-top:18px;}
 .pay-legacy summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--text-dim);padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:12px;}
 .pay-legacy .page-title{display:none;}
+
+/* === v16: تنسيق أوضح لصفحة المدفوعات + مودال تأكيد الدفع === */
+.pay-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;}
+.pay-hero-sub{margin:4px 0 0;font-size:12px;color:var(--text-dim);line-height:1.7;font-weight:600;}
+.pay-hero-count{flex:none;font-size:11px;font-weight:800;color:var(--text-dim);background:#f8fafc;padding:6px 12px;border-radius:999px;border:1px solid var(--line);}
+.pay-stats{grid-template-columns:repeat(2,1fr) !important;gap:10px;}
+@media(min-width:640px){.pay-stats{grid-template-columns:repeat(4,1fr) !important;}}
+.pay-stat-unpaid{background:#fef2f2;border-color:#fecaca;}
+.pay-stat-unpaid .num{color:#b91c1c;}
+.pay-stat-paid{background:#f0fdf4;border-color:#bbf7d0;}
+.pay-stat-paid .num{color:#15803d;}
+.pay-alert{background:linear-gradient(135deg,#fef2f2,#fff7ed);border:1px solid #fecaca;color:#9a3412;border-radius:14px;padding:10px 12px;font-size:12.5px;font-weight:800;margin:0 0 12px;line-height:1.7;}
+.pay-chips .fu-chip{padding:8px 14px;border-radius:999px;font-size:12px;}
+.pay-when{margin-top:4px;font-size:11px;font-weight:800;color:#0f766e;background:#f0fdfa;display:inline-block;padding:3px 8px;border-radius:999px;}
+.pay-modal-note{font-size:12px;color:var(--text-dim);line-height:1.85;margin:0 0 12px;}
+.pay-card{border-radius:20px;}
+.pay-row{border-radius:16px;}
 /* === تعديل: بطاقات المشرفات قابلة للضغط للفلترة + لون ثابت لكل مشرفة === */
 .sv-chip{cursor:pointer;transition:box-shadow .15s,border-color .15s;}
 .sv-chip.active{border-color:var(--teal-dark);box-shadow:0 0 0 2px var(--teal-dark),0 4px 10px rgba(2,132,199,.18);}
@@ -3329,6 +3346,7 @@ function payStudentRow(s){
   return `<div class="pay-row st-${st.state}">
     <div class="pay-r1"><div class="pay-name" title="${escAttr(r.studentName||'')}">${esc(r.studentName)||'—'}</div><span class="pay-chip st-${st.state}">${PAY_STATE_LABEL[st.state]}</span></div>
     ${meta ? `<div class="pay-meta">${meta}</div>` : ''}
+    ${st.paid && r.studentPaymentDate ? `<div class="pay-when">📅 ${esc(formatPayWhen(r.studentPaymentDate))}</div>` : ''}
     <div class="pay-prog">${prog}</div>
     <div class="pay-r3">
       <div class="pay-seg">
@@ -3372,23 +3390,29 @@ function pagePayments(){
   const cnt = f => all.filter(s=>payMatchFilter(s, f)).length;
   const needCollect = all.filter(s=>s.st.state === 'done' && !s.st.paid).length;
   const legacyCount = DATA.students.filter(s=>!s.archived).length;
+  const unpaidN = cnt('unpaid'), paidN = cnt('paid');
   return `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <h1 class="page-title">💳 المدفوعات</h1>
-      <span style="font-size:11px;font-weight:700;color:var(--text-dim);background:#f8fafc;padding:4px 10px;border-radius:10px;">${model.length} ولي أمر</span>
+    <div class="pay-hero">
+      <div>
+        <h1 class="page-title">💳 المدفوعات</h1>
+        <p class="pay-hero-sub">متابعة يومية واضحة: مين دفع ومين لسه. تسجيل الدفع بيتأكد بتاريخ ووقت جهازك.</p>
+      </div>
+      <span class="pay-hero-count">${model.length} ولي أمر</span>
     </div>
-    <div class="stat-row" style="grid-template-columns:repeat(3,1fr);">
+    <div class="stat-row pay-stats">
       <div class="stat-card"><div class="num">${model.length}</div><div class="lbl">أولياء الأمور</div></div>
       <div class="stat-card"><div class="num">${all.length}</div><div class="lbl">الطلاب</div></div>
-      <div class="stat-card" style="${needCollect?'background:#fef2f2;border-color:#fecaca;':''}"><div class="num" style="${needCollect?'color:#b91c1c;':''}">${needCollect}</div><div class="lbl">انتهت ولم يدفعوا</div></div>
+      <div class="stat-card pay-stat-unpaid"><div class="num">${unpaidN}</div><div class="lbl">لم يدفع</div></div>
+      <div class="stat-card pay-stat-paid"><div class="num">${paidN}</div><div class="lbl">دفع</div></div>
     </div>
+    ${needCollect?`<div class="pay-alert">🔴 ${needCollect} انتهت حصصهم ولسه ما دفعوش — راجعهم الأول</div>`:''}
     <div class="pay-chips">
       ${payChip('all','الكل',all.length)}
+      ${payChip('unpaid','لم يدفع',unpaidN)}
+      ${payChip('paid','دفع',paidN)}
       ${payChip('done','🔴 انتهت',cnt('done'))}
       ${payChip('warn','🟠 أوشكت',cnt('warn'))}
       ${payChip('ok','🟢 رصيد متاح',cnt('ok'))}
-      ${payChip('unpaid','لم يدفع',cnt('unpaid'))}
-      ${payChip('paid','دفع',cnt('paid'))}
     </div>
     <div class="sr-toolbar">
       <input class="sr-search" id="paySearchInput" placeholder="🔍 دوّر باسم الطالب أو رقم ولي الأمر..." value="${esc(payQuery)}" oninput="payQuery=this.value; renderPayList();">
@@ -3408,30 +3432,24 @@ async function setPayStatus(id, paid){
   if(!isOwner()) return;
   const r = DATA.student_records.find(x=>x.id===id); if(!r) return;
   if(isPaidStatus(r.studentPaymentStatus) === paid) return; // نفس الحالة الحالية: لا شيء يتغير
-  const nv = paid ? 'دفع' : 'لم يدفع';
+  if(paid){ openPayConfirmModal([id], r.studentName || ''); return; } // === v16: لا حفظ إلا بعد تأكيد التاريخ والوقت ===
+  const nv = 'لم يدفع';
   const old = r.studentPaymentStatus;
-  r.studentPaymentStatus = nv; render(); // تحديث فوري للشاشة
-  const { error } = await sb.from('student_records').update({ student_payment_status: nv }).eq('id', id);
+  const oldDate = r.studentPaymentDate;
+  r.studentPaymentStatus = nv; r.studentPaymentDate = ''; render(); // تحديث فوري للشاشة
+  const { error } = await sb.from('student_records').update({ student_payment_status: nv, student_payment_date: null }).eq('id', id);
   if(error){
-    const cur = DATA.student_records.find(x=>x.id===id); if(cur) cur.studentPaymentStatus = old;
+    const cur = DATA.student_records.find(x=>x.id===id); if(cur){ cur.studentPaymentStatus = old; cur.studentPaymentDate = oldDate; }
     render(); showToast('تعذر التحديث: ' + dbErrorText(error)); return;
   }
-  showToast(paid ? '✅ تم تسجيل الدفع' : 'تم التحويل إلى: لم يدفع');
+  showToast('تم التحويل إلى: لم يدفع');
 }
 async function payAllInGroup(key){
   if(!isOwner()) return;
   const g = payBuildModel().find(x=>x.key === key); if(!g) return;
   const items = payVisible(g).filter(s=>!s.st.paid);
   if(!items.length) return;
-  const ids = items.map(s=>s.r.id);
-  const olds = {}; items.forEach(s=>{ olds[s.r.id] = s.r.studentPaymentStatus; s.r.studentPaymentStatus = 'دفع'; });
-  render();
-  const { error } = await sb.from('student_records').update({ student_payment_status: 'دفع' }).in('id', ids);
-  if(error){
-    ids.forEach(id=>{ const cur = DATA.student_records.find(x=>x.id===id); if(cur) cur.studentPaymentStatus = olds[id]; });
-    render(); showToast('تعذر التحديث: ' + dbErrorText(error)); return;
-  }
-  showToast('✅ تم تسجيل دفع ' + ids.length + (ids.length === 2 ? ' طالبين' : ' طلاب'));
+  openPayConfirmModal(items.map(s=>s.r.id), items.map(s=>s.r.studentName).filter(Boolean).join('، '));
 }
 // تجديد الاشتراك: يبدأ عدّاد الحصص من الصفر (الحصص المسجلة حتى هذه اللحظة تخص الدورة القديمة) وتعود الحالة إلى "لم يدفع"
 async function renewSubscription(id){
@@ -4080,7 +4098,7 @@ async function confirmResetSupervisorPassword(id){
 async function applySupervisorPassword(id, password){
   showToast('جاري تغيير كلمة السر...');
   try{
-    const result = await callSupervisorApi({ action:'resetPassword', id, password });
+    const result = await callResetSupervisorPassword(id, password);
     if(result && result.ok){
       try{ closeModal(); }catch(e){}
       showToast('✅ تم تغيير كلمة السر — المشرفة هتحتاج تدخل بالباسورد الجديد');
@@ -4093,8 +4111,128 @@ async function applySupervisorPassword(id, password){
 }
 // === نهاية إضافات v15 ===
 
+// =====================================================================
+// === v16: مسار مستقل لكلمة سر المشرفة + تأكيد الدفع بالتاريخ والوقت
+// كل الكود التالي إضافي بالكامل ولا يعدّل أي ميزة غير المطلوبة.
+// =====================================================================
+
+function payDeviceNow(){
+  const n = new Date();
+  const yyyy = n.getFullYear();
+  const mm = String(n.getMonth() + 1).padStart(2, '0');
+  const dd = String(n.getDate()).padStart(2, '0');
+  const hh = String(n.getHours()).padStart(2, '0');
+  const mi = String(n.getMinutes()).padStart(2, '0');
+  return { date: yyyy + '-' + mm + '-' + dd, time: hh + ':' + mi, stamp: yyyy + '-' + mm + '-' + dd + ' ' + hh + ':' + mi };
+}
+
+function formatPayWhen(v){
+  const s = String(v || '').trim();
+  if(!s) return '';
+  const m = s.match(/(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
+  if(!m) return s;
+  const d = m[3] + '/' + m[2] + '/' + m[1];
+  if(m[4] != null){
+    const h = parseInt(m[4], 10);
+    const am = h < 12;
+    const h12 = h % 12 || 12;
+    return d + ' • ' + h12 + ':' + m[5] + (am ? ' ص' : ' م');
+  }
+  return d;
+}
+
+function openPayConfirmModal(ids, names){
+  if(!isOwner()) return;
+  window._payPendingIds = (ids || []).slice();
+  if(!window._payPendingIds.length) return;
+  const now = payDeviceNow();
+  const box = document.getElementById('modalBody');
+  if(!box) return;
+  box.innerHTML = `
+    <h3>تأكيد تسجيل الدفع</h3>
+    <p class="pay-modal-note">الطالب: <b>${esc(names || '—')}</b><br>التاريخ الافتراضي هو <b>تاريخ جهازك اليوم</b> (${esc(now.date.split('-').reverse().join('/'))}). لو فتحت النافذة يوم تاني هيتظبط لوحده. الحالة مش هتتغيّر إلا بعد التأكيد.</p>
+    <div class="field"><label>تاريخ الدفع</label><input id="f_payDate" type="date" value="${now.date}"></div>
+    <div class="field"><label>وقت الدفع</label><input id="f_payTime" type="time" value="${now.time}"></div>
+    <div class="modal-actions">
+      <button class="save" onclick="confirmPayWithWhen()">تأكيد</button>
+      <button class="cancel" onclick="window._payPendingIds=null;closeModal();">إلغاء</button>
+    </div>`;
+  openModal();
+}
+
+async function confirmPayWithWhen(){
+  if(!isOwner()) return;
+  const ids = (window._payPendingIds || []).slice();
+  if(!ids.length){ showToast('⚠️ مفيش طالب محدد'); return; }
+  const dEl = document.getElementById('f_payDate');
+  const tEl = document.getElementById('f_payTime');
+  const date = dEl ? String(dEl.value || '').trim() : '';
+  const time = tEl ? String(tEl.value || '').trim() : '';
+  if(!date){ showToast('⚠️ اختاري تاريخ الدفع'); return; }
+  if(!time){ showToast('⚠️ اختاري وقت الدفع'); return; }
+  const when = date + ' ' + time;
+  const olds = {};
+  ids.forEach(id => {
+    const r = DATA.student_records.find(x => x.id === id);
+    if(!r) return;
+    olds[id] = { p: r.studentPaymentStatus, d: r.studentPaymentDate };
+    r.studentPaymentStatus = 'دفع';
+    r.studentPaymentDate = when;
+  });
+  window._payPendingIds = null;
+  try{ closeModal(); }catch(e){}
+  render();
+  const sendPay = (payload) => {
+    const q = sb.from('student_records').update(payload);
+    return ids.length === 1 ? q.eq('id', ids[0]) : q.in('id', ids);
+  };
+  let { error } = await sendPay({ student_payment_status: 'دفع', student_payment_date: when });
+  if(error && /student_payment_date|invalid input|date\/time/i.test(String(error.message || '') + String(error.details || '') + String(error.hint || ''))){
+    ({ error } = await sendPay({ student_payment_status: 'دفع', student_payment_date: date }));
+  }
+  if(error){
+    ids.forEach(id => {
+      const cur = DATA.student_records.find(x => x.id === id);
+      if(cur && olds[id]){ cur.studentPaymentStatus = olds[id].p; cur.studentPaymentDate = olds[id].d; }
+    });
+    render();
+    showToast('تعذر التحديث: ' + dbErrorText(error));
+    return;
+  }
+  showToast(ids.length > 1 ? ('✅ تم تسجيل دفع ' + ids.length + ' طلاب') : '✅ تم تسجيل الدفع');
+}
+
+async function callResetSupervisorPassword(id, password){
+  const token = await ownerToken();
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 20000);
+  const parse = async (res) => {
+    const text = await res.text();
+    let data = null;
+    try{ data = JSON.parse(text); }catch(e){ data = null; }
+    return data && typeof data === 'object' ? data : null;
+  };
+  try{
+    const res = await fetch('/api/reset-supervisor-password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, id, password }), signal: ctrl.signal
+    });
+    const data = await parse(res);
+    if(data && (data.ok === true || (data.error && data.error !== 'إجراء غير معروف'))) return data;
+  }catch(e){
+    if(e && e.name === 'AbortError') return { ok: false, error: 'انتهت مهلة الاتصال بالخادم' };
+  }finally{ clearTimeout(timer); }
+  const fb = await callSupervisorApi({ action: 'resetPassword', id, password });
+  if(fb && fb.error === 'إجراء غير معروف'){
+    return { ok: false, error: 'السيرفر لسه بالنسخة القديمة. ارفع الملف api/reset-supervisor-password.js على Vercel ثم اضغط Redeploy.' };
+  }
+  return fb;
+}
+// === نهاية إضافات v16 ===
+
+
 
 
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e3af5fc809e191',t:'MTc5MjYyMTU5OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4f393c8287dc123',t:'MTc5Mjc4ODI0MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
