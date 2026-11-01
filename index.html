@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261101120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261101180000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -1263,6 +1263,7 @@ async function loadData(){
     DATA.followups = (fol.data||[]).map(mapFollowup);
     _lastSyncAt = Date.now();
     setCloudStatus('connected');
+    await syncPayCycles(); // === v19: ترحيل لم يدفع→معلق + تصفير الباقة المدفوعة المنتهية ===
   }catch(e){ showToast("تعذر تحميل البيانات"); setCloudStatus('error'); }
   render();
   hideBootSplash(); // === تعديل: إخفاء شاشة التحميل بعد أول رسم للبيانات ===
@@ -1348,6 +1349,7 @@ async function refreshCriticalData(){
     DATA.student_records = nSrec;
     DATA.followups = nFol;
     if(nTea) DATA.teachers = nTea;
+    await syncPayCycles(); // === v19 ===
     scheduleRealtimeRender();
   }catch(e){ /* المحاولة القادمة تعوّض */ }
 }
@@ -2075,7 +2077,7 @@ function studentRecordCard(r){
       ${r.subject?`<span class="sr-chip" style="background:#ede9fe;color:#6d28d9;">📘 ${esc(r.subject)}</span>`:''}
       ${r.serviceType?`<span class="sr-chip" style="background:${svcCol.bg};color:${svcCol.c};">${esc(r.serviceType)}</span>`:''}
       ${r.subscriptionCycle?`<span class="sr-chip" style="background:${cycleCol.bg};color:${cycleCol.c};">${esc(r.subscriptionCycle)}</span>`:''}
-      ${r.sessionCount?`<span class="sr-chip" style="background:#f1f5f9;color:#475569;">🔢 ${esc(r.sessionCount)} حصة${sessionTotal(r)?` • تبقّى ${Math.max(0, sessionTotal(r)-attendedCount(r.id))}`:''}</span>`:''}
+      ${r.sessionCount?`<span class="sr-chip" style="background:#f1f5f9;color:#475569;">🔢 ${esc(r.sessionCount)} حصة${sessionTotal(r)?` • تبقّى ${Math.max(0, sessionTotal(r)-displayAttended(r))}`:''}</span>`:''}
       ${r.sessionDuration?`<span class="sr-chip" style="background:#f1f5f9;color:#475569;">⏱️ ${esc(r.sessionDuration)} د</span>`:''}
     </div>
     <!-- === تعديل: تم حذف اللوحتين الماليتين، وإضافة مواعيد الحصص بدلاً منهما === -->
@@ -2794,6 +2796,8 @@ async function setFollowupStatus(recordId, date, time, status){
   if(!ok) return;
   delete pendingFuNotes[key];
   _attToneMap = null;
+  _attMap = null;
+  await syncPayCycles(); // === v19: لو دي آخر حصة في باقة مدفوعة → معلق وعدّاد جديد ===
   render();
   showToast('تم تسجيل الحصة: ' + status);
 }
@@ -3328,7 +3332,7 @@ function payPhoneKey(raw){
 // حالة استهلاك الحصص: done (انتهت) / warn (نصف الحصص أو أكثر) / ok (رصيد متاح) / none (لا يوجد إجمالي مسجل)
 function payState(r){
   const total = sessionTotal(r);
-  const used = attendedCount(r.id);
+  const used = displayAttended(r);
   const kind = effectivePayKind(r);
   const paid = kind === 'دفع';
   let state = 'none';
@@ -4424,7 +4428,7 @@ function effectivePayKind(r){
 function remainChip(r){
   const total = sessionTotal(r);
   if(!total) return '';
-  const used = attendedCount(r.id);
+  const used = displayAttended(r);
   const left = Math.max(0, total - used);
   const pct = Math.min(100, Math.round(used / total * 100));
   const cls = left === 0 ? 'done' : (left === 1 ? 'warn' : 'ok');
@@ -4453,11 +4457,74 @@ async function setPayKind(id, kind){
 }
 // === نهاية إضافات v18 ===
 
+// === إضافات v19: ترحيل لم يدفع→معلق + تصفير العداد عند انتهاء باقة مدفوعة ===
+let _payCycleBusy = false;
+
+function packExhausted(r){
+  const total = sessionTotal(r);
+  return total > 0 && attendedCount(r.id) >= total;
+}
+
+// لو الباقة المدفوعة خلصت وقبل ما يتكتب التجديد في القاعدة: العداد يتعرض من الصفر فوراً
+function displayAttended(r){
+  const used = attendedCount(r.id);
+  if(storedPayKind(r && r.studentPaymentStatus) === 'دفع' && packExhausted(r)) return 0;
+  return used;
+}
+
+function payCycleStamp(){
+  const n = new Date();
+  return localDateStr(n) + ' ' + String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0');
+}
+
+async function syncPayCycles(){
+  if(_payCycleBusy || !CURRENT_PROFILE) return;
+  const list = DATA.student_records || [];
+  if(!list.length) return;
+  _attMap = buildAttendanceMap();
+  const jobs = [];
+  for(let i = 0; i < list.length; i++){
+    const r = list[i];
+    if(!r || r.archived) continue;
+    const stored = storedPayKind(r.studentPaymentStatus);
+    const exhausted = packExhausted(r);
+    if(stored === 'دفع' && exhausted) jobs.push({ r, kind: 'roll' });
+    else if(stored === 'لم يدفع' && !exhausted) jobs.push({ r, kind: 'migrate' });
+  }
+  _attMap = null;
+  if(!jobs.length) return;
+  _payCycleBusy = true;
+  const stamp = payCycleStamp();
+  try{
+    for(let i = 0; i < jobs.length; i++){
+      const job = jobs[i], r = job.r;
+      const oldP = r.studentPaymentStatus, oldA = r.cycleAnchor;
+      if(job.kind === 'roll'){
+        // انتهت باقة مدفوعة: دورة جديدة من الصفر + معلق
+        r.studentPaymentStatus = 'معلق';
+        r.cycleAnchor = stamp;
+        const { error } = await sb.from('student_records').update({ student_payment_status: 'معلق', cycle_anchor: stamp }).eq('id', r.id);
+        if(error){ r.studentPaymentStatus = oldP; r.cycleAnchor = oldA; }
+      } else {
+        // طلاب كانوا "لم يدفع" ولسه في الباقة: ترحيل دفعة واحدة إلى معلق
+        r.studentPaymentStatus = 'معلق';
+        const { error } = await sb.from('student_records').update({ student_payment_status: 'معلق' }).eq('id', r.id);
+        if(error) r.studentPaymentStatus = oldP;
+      }
+    }
+  } finally {
+    _payCycleBusy = false;
+    _attMap = null;
+  }
+}
+// === نهاية إضافات v19 ===
+
+
 
 
 
 
 
 </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a53ba6b60f981f37',t:'MTc5MzU0Mzk5MA=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a53ba6b60f981f37',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
