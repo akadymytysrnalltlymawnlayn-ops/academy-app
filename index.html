@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261024120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261101120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -108,6 +108,33 @@ input,select,textarea{font-family:inherit;}
 .att-pill.att-ok{background:#dcfce7;color:#15803d;}
 .att-pill.att-warn{background:#fef3c7;color:#a16207;}
 .att-pill.att-risk{background:#fee2e2;color:#b91c1c;}
+/* === v18: كروت الحصص + حالات الدفع الثلاث === */
+.pay-pill{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap;vertical-align:middle;}
+.pay-pill.pay-k-paid{background:#dcfce7;color:#15803d;}
+.pay-pill.pay-k-hold{background:#fef3c7;color:#a16207;}
+.pay-pill.pay-k-due{background:#fee2e2;color:#b91c1c;}
+.sc2-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}
+.sc2-time{background:#e0f2fe;color:var(--teal-dark);padding:5px 10px;border-radius:10px;font-weight:800;font-size:13px;letter-spacing:.2px;flex:none;}
+.sc2-pills{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center;}
+.sc2-body{cursor:pointer;padding:2px 0 8px;}
+.sc2-name{margin:0;font-size:15px;font-weight:800;line-height:1.45;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.sc2-sub{display:inline-block;background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;}
+.sc2-line{margin-top:5px;font-size:12px;color:var(--text-dim);font-weight:600;line-height:1.7;display:flex;flex-wrap:wrap;gap:6px 12px;}
+.sc2-phone{color:#0f766e;font-weight:800;direction:ltr;unicode-bidi:isolate;}
+.sc2-remain{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:12px;background:#f0f9ff;color:#0369a1;font-size:12px;font-weight:800;}
+.sc2-remain-lbl{flex:1;min-width:0;}
+.sc2-remain-n{font-variant-numeric:tabular-nums;opacity:.9;}
+.sc2-remain-bar{display:inline-block;width:54px;height:6px;border-radius:99px;background:rgba(255,255,255,.85);overflow:hidden;flex:none;}
+.sc2-remain-bar i{display:block;height:100%;border-radius:99px;background:currentColor;}
+.sc2-remain.warn{background:#fef3c7;color:#b45309;}
+.sc2-remain.done{background:#fee2e2;color:#b91c1c;}
+.sc2-remain.ok{background:#ecfdf5;color:#047857;}
+.session-card .sc-wa-buttons{gap:6px;margin-top:8px;padding-top:8px;}
+.pay-seg button.on.hold{background:#f59e0b;color:#fff;box-shadow:0 2px 6px rgba(245,158,11,.35);}
+.pay-stat-hold{background:#fffbeb;border-color:#fde68a;}
+.pay-stat-hold .num{color:#b45309;}
+.pay-seg{flex-wrap:wrap;}
+.pay-seg button{padding:6px 10px;font-size:11.5px;}
 .sc-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer;}
 .sc-time{background:#e0f2fe;color:var(--teal-dark);padding:4px 10px;border-radius:8px;font-weight:700;font-size:13px;}
 .sc-info h4{margin:0;font-size:14px;font-weight:700;}
@@ -331,7 +358,8 @@ html.has-session #authScreen{display:none;}
 .pay-hero-sub{margin:4px 0 0;font-size:12px;color:var(--text-dim);line-height:1.7;font-weight:600;}
 .pay-hero-count{flex:none;font-size:11px;font-weight:800;color:var(--text-dim);background:#f8fafc;padding:6px 12px;border-radius:999px;border:1px solid var(--line);}
 .pay-stats{grid-template-columns:repeat(2,1fr) !important;gap:10px;}
-@media(min-width:640px){.pay-stats{grid-template-columns:repeat(4,1fr) !important;}}
+@media(min-width:640px){.pay-stats{grid-template-columns:repeat(3,1fr) !important;}}
+@media(min-width:900px){.pay-stats{grid-template-columns:repeat(5,1fr) !important;}}
 .pay-stat-unpaid{background:#fef2f2;border-color:#fecaca;}
 .pay-stat-unpaid .num{color:#b91c1c;}
 .pay-stat-paid{background:#f0fdf4;border-color:#bbf7d0;}
@@ -1832,6 +1860,7 @@ function fuListInner(){
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                 ${f.slotTime?`<span class="fu-time">🕒 ${esc(formatTime12(f.slotTime))}</span>`:''}
                 <span class="p-name">${esc(f.studentName)||'بدون اسم'}</span>
+                ${f.recordId?paymentBadge(DATA.student_records.find(x=>x.id===f.recordId)||{id:f.recordId, studentPaymentStatus:''}):''}
                 ${f.legacy?`<span class="fu-time" style="background:#f5f3ff;color:#6d28d9;">🗂️ جدول قديم</span>`:''}
               </div>
               <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">👩‍🏫 ${esc(f.teacherName)||'—'} ${f.subject?'• '+esc(f.subject):''}</div>
@@ -2032,7 +2061,7 @@ function studentRecordCard(r){
     ${isOwner()?`<div><span class="sr-owner-badge ${r.supervisorId?'':'none'}" style="${r.supervisorId?supBadgeStyle(r.supervisorId):''}">${r.supervisorId?`👤 أضافته: ${esc(supervisorLabel(r.supervisorId))}`:'👤 بدون مشرفة (سجل قديم)'}</span></div>`:''}
     <div class="sr-head" onclick="openStudentRecordModal('${r.id}')" style="cursor:pointer;">
       <div>
-        <div class="sr-name">${esc(r.studentName)||'—'} ${attToneBadge(attTone)}</div>
+        <div class="sr-name">${esc(r.studentName)||'—'} ${attToneBadge(attTone)} ${paymentBadge(r)}</div>
         <div class="sr-teacher">👩‍🏫 ${esc(r.teacherName)||'—'}</div>
         ${r.studentPhone?`<div class="sr-phone">📱 ${esc(r.studentPhone)}</div>`:''}
       </div>
@@ -2046,7 +2075,7 @@ function studentRecordCard(r){
       ${r.subject?`<span class="sr-chip" style="background:#ede9fe;color:#6d28d9;">📘 ${esc(r.subject)}</span>`:''}
       ${r.serviceType?`<span class="sr-chip" style="background:${svcCol.bg};color:${svcCol.c};">${esc(r.serviceType)}</span>`:''}
       ${r.subscriptionCycle?`<span class="sr-chip" style="background:${cycleCol.bg};color:${cycleCol.c};">${esc(r.subscriptionCycle)}</span>`:''}
-      ${r.sessionCount?`<span class="sr-chip" style="background:#f1f5f9;color:#475569;">🔢 ${esc(r.sessionCount)} حصة</span>`:''}
+      ${r.sessionCount?`<span class="sr-chip" style="background:#f1f5f9;color:#475569;">🔢 ${esc(r.sessionCount)} حصة${sessionTotal(r)?` • تبقّى ${Math.max(0, sessionTotal(r)-attendedCount(r.id))}`:''}</span>`:''}
       ${r.sessionDuration?`<span class="sr-chip" style="background:#f1f5f9;color:#475569;">⏱️ ${esc(r.sessionDuration)} د</span>`:''}
     </div>
     <!-- === تعديل: تم حذف اللوحتين الماليتين، وإضافة مواعيد الحصص بدلاً منهما === -->
@@ -2100,8 +2129,9 @@ function openStudentRecordModal(id){
     <!-- === تعديل: حقل حالة الدفع للمالك فقط (المشرفات يرون الكلمة على كارت الجدولة فقط ولا يستطيعون تغييرها) === -->
     ${isOwner()?`<div class="field"><label>حالة الدفع</label>
       <select id="f_srPayStatus">
-        <option value="لم يدفع" ${isPaidStatus(v.studentPaymentStatus)?'':'selected'}>لم يدفع</option>
-        <option value="دفع" ${isPaidStatus(v.studentPaymentStatus)?'selected':''}>دفع</option>
+        <option value="معلق" ${storedPayKind(v.studentPaymentStatus)==='معلق'?'selected':''}>معلق</option>
+        <option value="دفع" ${storedPayKind(v.studentPaymentStatus)==='دفع'?'selected':''}>دفع</option>
+        <option value="لم يدفع" ${storedPayKind(v.studentPaymentStatus)==='لم يدفع'?'selected':''}>لم يدفع</option>
       </select>
     </div>`:''}
     <!-- === تعديل: قسم مواعيد الحصص (ديناميكي) === -->
@@ -2184,7 +2214,7 @@ async function saveStudentRecordCore(id){
     subscriptionCycle: document.getElementById('f_srCycle').value.trim(),
     sessionCount: document.getElementById('f_srSessionCount').value.trim(),
     sessionDuration: document.getElementById('f_srDuration').value.trim(),
-    studentPaymentStatus: (document.getElementById('f_srPayStatus') ? document.getElementById('f_srPayStatus').value : (base.studentPaymentStatus || 'لم يدفع')), // === تعديل: المشرفة لا ترى الحقل فتحتفظ بالحالة الحالية، والطالب الجديد يبدأ "لم يدفع" ===
+    studentPaymentStatus: (document.getElementById('f_srPayStatus') ? document.getElementById('f_srPayStatus').value : (base.studentPaymentStatus || 'معلق')), // === v18: المشرفة تحتفظ بالحالة، والطالب الجديد يبدأ "معلق" ===
     // === تعديل: تم حذف قراءة الحقول المالية من الفورم (القيم القديمة المحفوظة تبقى كما هي عبر ...base) ===
     // === تعديل: قراءة مواعيد الحصص (الصفوف التي بدون وقت تُتجاهل) ===
     slots: [...document.querySelectorAll('#srSlotsContainer .slot-row')]
@@ -2640,23 +2670,27 @@ function balanceChip(r){
 // === تعديل: حالة الدفع (دفع / لم يدفع) - القيم القديمة المحتملة تُفهم أيضًا، وأي قيمة فارغة أو غير معروفة تُعتبر "لم يدفع" ===
 function isPaidStatus(v){ const s = String(v||'').trim(); return s==='دفع' || s==='تم الدفع' || s==='مدفوع'; }
 function paymentBadge(r){
-  return isPaidStatus(r.studentPaymentStatus)
-    ? `<span class="badge" style="background:#dcfce7;color:#15803d">دفع</span>`
-    : `<span class="badge" style="background:#fee2e2;color:#b91c1c">لم يدفع</span>`;
+  const k = effectivePayKind(r);
+  if(k === 'دفع') return `<span class="pay-pill pay-k-paid" title="اشتراك مؤكد للباقة الحالية">🟢 دفع</span>`;
+  if(k === 'معلق') return `<span class="pay-pill pay-k-hold" title="بدأ الحصص ولسه الدفع مش متأكد، أو باقة مدفوعة خلصت وبدأت دورة جديدة">🟡 معلق</span>`;
+  return `<span class="pay-pill pay-k-due" title="الحصص خلصت من غير تسجيل دفع">🔴 لم يدفع</span>`;
 }
 function recordClassCard(r, sl, date, hop){
   const attTone = attendanceToneOf(r.id);
-  return `<div class="session-card att-${attTone}">
-    <div class="sc-header" onclick="openStudentRecordModal('${r.id}')">
-      <div class="sc-time">${esc(formatTime12(sl.time))}</div>
-      <div class="sc-info">
-        <h4>${esc(r.studentName)||'بدون اسم'} ${r.subject?`<span style="display:inline-block;background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-right:6px;vertical-align:middle;">${esc(r.subject)}</span>`:''}</h4>
-        <p>${esc(r.teacherName)||'بدون معلمة'}${r.sessionDuration?` • ${esc(r.sessionDuration)} د`:''}</p>
-        ${ppBadge(hop)}${balanceChip(r)}<!-- === تعديل: عداد رصيد الحصص (المستهلك من الإجمالي) === -->
+  const payK = effectivePayKind(r);
+  return `<div class="session-card att-${attTone} pay-${payK}">
+    <div class="sc2-head">
+      <div class="sc2-time">${esc(formatTime12(sl.time))}</div>
+      <div class="sc2-pills">${paymentBadge(r)}${attToneBadge(attTone)}</div>
+    </div>
+    <div class="sc2-body" onclick="openStudentRecordModal('${r.id}')">
+      <div class="sc2-name">${esc(r.studentName)||'بدون اسم'}${r.subject?`<span class="sc2-sub">${esc(r.subject)}</span>`:''}</div>
+      <div class="sc2-line">
+        ${r.studentPhone?`<span class="sc2-phone">📱 ${esc(r.studentPhone)}</span>`:''}
+        <span>👩‍🏫 ${esc(r.teacherName)||'بدون معلمة'}</span>
+        ${r.sessionDuration?`<span>⏱️ ${esc(r.sessionDuration)} د</span>`:''}
       </div>
-      <div style="margin-right:auto;">
-        ${attToneBadge(attTone)}${paymentBadge(r)}<!-- === تعديل: حالة الدفع بدل كلمة "مشترك" (نفس الحجم والمكان) === -->
-      </div>
+      ${ppBadge(hop)}${remainChip(r)}
     </div>
     <div class="sc-wa-buttons">
       ${r.studentPhone?`<button class="wa-btn-sm wa-student-sm" onclick="waOpen('${jsAttr(r.studentPhone)}','')">${ICON.wa} الطالب</button>`:`<button class="wa-btn-sm disabled" style="background:#f1f5f9;color:#cbd5e1;">${ICON.wa} الطالب</button>`}
@@ -3295,12 +3329,15 @@ function payPhoneKey(raw){
 function payState(r){
   const total = sessionTotal(r);
   const used = attendedCount(r.id);
-  const paid = isPaidStatus(r.studentPaymentStatus);
+  const kind = effectivePayKind(r);
+  const paid = kind === 'دفع';
   let state = 'none';
   if(total > 0) state = used >= total ? 'done' : (used >= Math.ceil(total/2) ? 'warn' : 'ok');
-  // ترتيب الأولوية: 0 انتهت ولم يدفع، 1 انتهت ودفع (تحتاج تجديد)، 2/3 أوشكت، 4/5 مستقر، 6 بدون إجمالي
-  const rank = state==='done' ? (paid?1:0) : state==='warn' ? (paid?3:2) : state==='ok' ? (paid?5:4) : 6;
-  return { total, used, paid, state, rank, pct: total ? Math.min(100, Math.round(used/total*100)) : 0 };
+  // الأولوية: لم يدفع+انتهت، ثم معلق بعد انتهاء باقة، ثم المتأخرين، ثم الدافعين
+  const kr = kind === 'لم يدفع' ? 0 : kind === 'معلق' ? 1 : 2;
+  const sr = state === 'done' ? 0 : state === 'warn' ? 1 : state === 'ok' ? 2 : 3;
+  const rank = kr * 4 + sr;
+  return { total, used, paid, kind, state, rank, pct: total ? Math.min(100, Math.round(used/total*100)) : 0 };
 }
 // بناء النموذج: كل رقم ولي أمر = كارت واحد يضم كل إخوته (الطلاب بلا رقم يظهر كل منهم في كارت مستقل)
 function payBuildModel(){
@@ -3322,8 +3359,9 @@ function payMatchFilter(s, f){
   if(f === 'done') return s.st.state === 'done';
   if(f === 'warn') return s.st.state === 'warn';
   if(f === 'ok') return s.st.state === 'ok';
-  if(f === 'unpaid') return !s.st.paid;
-  if(f === 'paid') return s.st.paid;
+  if(f === 'unpaid') return s.st.kind === 'لم يدفع';
+  if(f === 'paid') return s.st.kind === 'دفع';
+  if(f === 'hold') return s.st.kind === 'معلق';
   return true;
 }
 function payMatchQuery(s, g, q, qDigits){
@@ -3369,8 +3407,9 @@ function payStudentRow(s){
     <div class="pay-prog">${prog}</div>
     <div class="pay-r3">
       <div class="pay-seg">
-        <button class="${st.paid?'on paid':''}" onclick="setPayStatus('${jsAttr(r.id)}', true)">دفع</button>
-        <button class="${st.paid?'':'on unpaid'}" onclick="setPayStatus('${jsAttr(r.id)}', false)">لم يدفع</button>
+        <button class="${st.kind==='دفع'?'on paid':''}" onclick="setPayStatus('${jsAttr(r.id)}', true)">دفع</button>
+        <button class="${st.kind==='معلق'?'on hold':''}" onclick="setPayKind('${jsAttr(r.id)}', 'معلق')">معلق</button>
+        <button class="${st.kind==='لم يدفع'?'on unpaid':''}" onclick="setPayStatus('${jsAttr(r.id)}', false)">لم يدفع</button>
       </div>
       <button class="pay-renew ${st.state==='done'?'hot':''}" title="تصفير عداد الحصص وبدء دورة جديدة" onclick="renewSubscription('${jsAttr(r.id)}')">🔄 تجديد</button>
     </div>
@@ -3380,7 +3419,7 @@ function payGroupCard(x, totalInGroup){
   const g = x.g, vis = x.vis;
   const worst = vis[0].st.state === 'none' ? 'none' : vis.reduce((w, s)=> (s.st.rank < w.rank ? s.st : w), vis[0].st).state;
   const count = totalInGroup > 1 ? (vis.length === totalInGroup ? `${totalInGroup} طلاب` : `${vis.length} من ${totalInGroup} طلاب`) : 'طالب واحد';
-  const unpaidVis = vis.filter(s=>!s.st.paid).length;
+  const unpaidVis = vis.filter(s=>s.st.kind !== 'دفع').length;
   return `<div class="pay-card st-${worst}">
     <div class="pay-head">
       <div class="pay-ic">${totalInGroup > 1 ? '👨‍👩‍👧' : '👤'}</div>
@@ -3407,26 +3446,28 @@ function pagePayments(){
   const model = payBuildModel();
   const all = []; model.forEach(g=>g.students.forEach(s=>all.push(s)));
   const cnt = f => all.filter(s=>payMatchFilter(s, f)).length;
-  const needCollect = all.filter(s=>s.st.state === 'done' && !s.st.paid).length;
+  const needCollect = all.filter(s=>s.st.state === 'done' && s.st.kind === 'لم يدفع').length;
   const legacyCount = DATA.students.filter(s=>!s.archived).length;
-  const unpaidN = cnt('unpaid'), paidN = cnt('paid');
+  const unpaidN = cnt('unpaid'), paidN = cnt('paid'), holdN = cnt('hold');
   return `
     <div class="pay-hero">
       <div>
         <h1 class="page-title">💳 المدفوعات</h1>
-        <p class="pay-hero-sub">متابعة يومية واضحة: مين دفع ومين لسه. تسجيل الدفع بيتأكد بتاريخ ووقت جهازك.</p>
+        <p class="pay-hero-sub">ثلاث حالات: معلق (بداية الدورة) • دفع (اشتراك مؤكد) • لم يدفع (الباقة خلصت من غير دفع). التحويل يتم تلقائي مع استهلاك الحصص.</p>
       </div>
       <span class="pay-hero-count">${model.length} ولي أمر</span>
     </div>
     <div class="stat-row pay-stats">
       <div class="stat-card"><div class="num">${model.length}</div><div class="lbl">أولياء الأمور</div></div>
       <div class="stat-card"><div class="num">${all.length}</div><div class="lbl">الطلاب</div></div>
+      <div class="stat-card pay-stat-hold"><div class="num">${holdN}</div><div class="lbl">معلق</div></div>
       <div class="stat-card pay-stat-unpaid"><div class="num">${unpaidN}</div><div class="lbl">لم يدفع</div></div>
       <div class="stat-card pay-stat-paid"><div class="num">${paidN}</div><div class="lbl">دفع</div></div>
     </div>
     ${needCollect?`<div class="pay-alert">🔴 ${needCollect} انتهت حصصهم ولسه ما دفعوش — راجعهم الأول</div>`:''}
     <div class="pay-chips">
       ${payChip('all','الكل',all.length)}
+      ${payChip('hold','معلق',holdN)}
       ${payChip('unpaid','لم يدفع',unpaidN)}
       ${payChip('paid','دفع',paidN)}
       ${payChip('done','🔴 انتهت',cnt('done'))}
@@ -3450,8 +3491,11 @@ function setPayFilter(f){ payFilter = f; render(); }
 async function setPayStatus(id, paid){
   if(!isOwner()) return;
   const r = DATA.student_records.find(x=>x.id===id); if(!r) return;
-  if(isPaidStatus(r.studentPaymentStatus) === paid) return; // نفس الحالة الحالية: لا شيء يتغير
-  if(paid){ openPayConfirmModal([id], r.studentName || ''); return; } // === v16: لا حفظ إلا بعد تأكيد التاريخ والوقت ===
+  if(paid){
+    if(isPaidStatus(r.studentPaymentStatus) && effectivePayKind(r) === 'دفع') return;
+    openPayConfirmModal([id], r.studentName || ''); return; // === v16: لا حفظ إلا بعد تأكيد التاريخ والوقت ===
+  }
+  if(storedPayKind(r.studentPaymentStatus) === 'لم يدفع') return;
   const nv = 'لم يدفع';
   const old = r.studentPaymentStatus;
   const oldDate = r.studentPaymentDate;
@@ -3466,7 +3510,7 @@ async function setPayStatus(id, paid){
 async function payAllInGroup(key){
   if(!isOwner()) return;
   const g = payBuildModel().find(x=>x.key === key); if(!g) return;
-  const items = payVisible(g).filter(s=>!s.st.paid);
+  const items = payVisible(g).filter(s=>s.st.kind !== 'دفع');
   if(!items.length) return;
   openPayConfirmModal(items.map(s=>s.r.id), items.map(s=>s.r.studentName).filter(Boolean).join('، '));
 }
@@ -3476,12 +3520,12 @@ async function renewSubscription(id){
   const r = DATA.student_records.find(x=>x.id===id); if(!r) return;
   _attMap = null;
   const used = attendedCount(id), total = sessionTotal(r);
-  if(!window.confirm(`تجديد اشتراك "${r.studentName}"؟\n\nسيُصفَّر عداد الحصص (${used}${total ? ' من ' + total : ''}) ليبدأ من 0، وتعود الحالة إلى "لم يدفع".`)) return;
+  if(!window.confirm(`تجديد اشتراك "${r.studentName}"؟\n\nسيُصفَّر عداد الحصص (${used}${total ? ' من ' + total : ''}) ليبدأ من 0، وتعود الحالة إلى "معلق".`)) return;
   const now = new Date();
   const anchor = localDateStr(now) + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
   const old = { a: r.cycleAnchor, p: r.studentPaymentStatus };
-  r.cycleAnchor = anchor; r.studentPaymentStatus = 'لم يدفع'; render();
-  const { error } = await sb.from('student_records').update({ student_payment_status: 'لم يدفع', cycle_anchor: anchor }).eq('id', id);
+  r.cycleAnchor = anchor; r.studentPaymentStatus = 'معلق'; render();
+  const { error } = await sb.from('student_records').update({ student_payment_status: 'معلق', cycle_anchor: anchor }).eq('id', id);
   if(error){
     const cur = DATA.student_records.find(x=>x.id===id);
     if(cur){ cur.cycleAnchor = old.a; cur.studentPaymentStatus = old.p; }
@@ -4194,9 +4238,11 @@ async function confirmPayWithWhen(){
   ids.forEach(id => {
     const r = DATA.student_records.find(x => x.id === id);
     if(!r) return;
-    olds[id] = { p: r.studentPaymentStatus, d: r.studentPaymentDate };
+    const exhausted = sessionTotal(r) > 0 && attendedCount(r.id) >= sessionTotal(r);
+    olds[id] = { p: r.studentPaymentStatus, d: r.studentPaymentDate, a: r.cycleAnchor, exhausted };
     r.studentPaymentStatus = 'دفع';
     r.studentPaymentDate = when;
+    if(exhausted) r.cycleAnchor = when;
   });
   window._payPendingIds = null;
   try{ closeModal(); }catch(e){}
@@ -4219,6 +4265,15 @@ async function confirmPayWithWhen(){
     return;
   }
   showToast(ids.length > 1 ? ('✅ تم تسجيل دفع ' + ids.length + ' طلاب') : '✅ تم تسجيل الدفع');
+  const anchored = ids.filter(id => olds[id] && olds[id].exhausted);
+  for(let i = 0; i < anchored.length; i++){
+    const id = anchored[i];
+    const { error: aErr } = await sb.from('student_records').update({ cycle_anchor: when }).eq('id', id);
+    if(aErr){
+      const cur = DATA.student_records.find(x => x.id === id);
+      if(cur && olds[id]) cur.cycleAnchor = olds[id].a;
+    }
+  }
 }
 
 async function callResetSupervisorPassword(id, password){
@@ -4343,10 +4398,66 @@ function attToneBadge(tone){
 function resetAttToneCache(){ _attToneMap = null; }
 // === نهاية إضافات v17 ===
 
+// === إضافات v18: حالات الدفع الثلاث + التحويل التلقائي عند انتهاء الباقة ===
+function storedPayKind(v){
+  const s = String(v || '').trim();
+  if(s === 'دفع' || s === 'تم الدفع' || s === 'مدفوع') return 'دفع';
+  if(s === 'لم يدفع' || s === 'لم يتم الدفع' || s === 'غير مدفوع') return 'لم يدفع';
+  if(s === 'معلق' || s === 'معلّق') return 'معلق';
+  return 'معلق'; // فاضي أو قيمة قديمة مجهولة = بداية الدورة
+}
+
+// التحويل التلقائي (عرض متزامن في الجدول / بيانات الطلاب / المتابعة / المدفوعات):
+// - الباقة خلصت وهو كان دافع → معلق (دورة جديدة محتاجة متابعة الدفع)
+// - الباقة خلصت ومن غير تسجيل دفع → لم يدفع
+// - غير كده تفضل الحالة المخزّنة (طالب جديد = معلق)
+function effectivePayKind(r){
+  const stored = storedPayKind(r && r.studentPaymentStatus);
+  const total = sessionTotal(r);
+  if(total > 0){
+    const used = attendedCount(r.id);
+    if(used >= total) return stored === 'دفع' ? 'معلق' : 'لم يدفع';
+  }
+  return stored;
+}
+
+function remainChip(r){
+  const total = sessionTotal(r);
+  if(!total) return '';
+  const used = attendedCount(r.id);
+  const left = Math.max(0, total - used);
+  const pct = Math.min(100, Math.round(used / total * 100));
+  const cls = left === 0 ? 'done' : (left === 1 ? 'warn' : 'ok');
+  const lbl = left === 0 ? 'انتهت الحصص' : ('تبقّى ' + left + (left === 1 ? ' حصة' : ' حصص'));
+  return `<div class="sc2-remain ${cls}" title="المستهلك من إجمالي الباقة الحالية"><span class="sc2-remain-lbl">${lbl}</span><span class="sc2-remain-n">${used} / ${total}</span><span class="sc2-remain-bar"><i style="width:${pct}%"></i></span></div>`;
+}
+
+async function setPayKind(id, kind){
+  if(!isOwner()) return;
+  if(kind === 'دفع') return setPayStatus(id, true);
+  if(kind === 'لم يدفع') return setPayStatus(id, false);
+  if(kind !== 'معلق') return;
+  const r = DATA.student_records.find(x => x.id === id); if(!r) return;
+  if(storedPayKind(r.studentPaymentStatus) === 'معلق') return;
+  const old = r.studentPaymentStatus;
+  const oldDate = r.studentPaymentDate;
+  r.studentPaymentStatus = 'معلق';
+  render();
+  const { error } = await sb.from('student_records').update({ student_payment_status: 'معلق' }).eq('id', id);
+  if(error){
+    const cur = DATA.student_records.find(x => x.id === id);
+    if(cur){ cur.studentPaymentStatus = old; cur.studentPaymentDate = oldDate; }
+    render(); showToast('تعذر التحديث: ' + dbErrorText(error)); return;
+  }
+  showToast('تم التحويل إلى: معلق');
+}
+// === نهاية إضافات v18 ===
+
+
 
 
 
 
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a536b11cc88a164b',t:'MTc5MzQ5MTk4Nw=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a536b11cc88a164b',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
