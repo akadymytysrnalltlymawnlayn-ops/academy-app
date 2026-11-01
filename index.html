@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261023120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261024120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -97,6 +97,17 @@ input,select,textarea{font-family:inherit;}
 .icon-btn.wa{background:#dcfce7;color:#15803d;}
 
 .session-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;position:relative;}
+
+/* === v17: بحث الجدول + ألوان الالتزام التراكمي === */
+.sched-search-wrap{margin:4px 0 12px;}
+.sched-search-wrap .sr-search{width:100%;box-shadow:0 2px 10px rgba(15,23,42,.04);}
+.session-card.att-ok,.sr-card.att-ok{border-right:5px solid #22c55e;background:linear-gradient(90deg,#f0fdf4 0%,#fff 42%);}
+.session-card.att-warn,.sr-card.att-warn{border-right:5px solid #eab308;background:linear-gradient(90deg,#fefce8 0%,#fff 42%);}
+.session-card.att-risk,.sr-card.att-risk{border-right:5px solid #ef4444;background:linear-gradient(90deg,#fef2f2 0%,#fff 42%);}
+.att-pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap;vertical-align:middle;margin:2px 0;}
+.att-pill.att-ok{background:#dcfce7;color:#15803d;}
+.att-pill.att-warn{background:#fef3c7;color:#a16207;}
+.att-pill.att-risk{background:#fee2e2;color:#b91c1c;}
 .sc-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer;}
 .sc-time{background:#e0f2fe;color:var(--teal-dark);padding:4px 10px;border-radius:8px;font-weight:700;font-size:13px;}
 .sc-info h4{margin:0;font-size:14px;font-weight:700;}
@@ -1969,6 +1980,7 @@ function supervisorStatsBar(){
   </div>`;
 }
 function pageStudentRecords(){
+  _attToneMap = null; // === v17: ألوان الالتزام من أحدث سجل حضور ===
   const q = srSearchQuery.trim().toLowerCase();
   const list = DATA.student_records.filter(r=>!r.archived && srSupMatch(r) && (
     !q ||
@@ -1997,6 +2009,7 @@ function renderSrListInner(list){
   return `<div class="sr-grid">${list.length? list.map(r=>studentRecordCard(r)).join('') : `<div class="empty">${ICON.empty}<div>لا توجد سجلات مطابقة</div></div>`}</div>`;
 }
 function renderSrList(){
+  _attToneMap = null;
   const q = srSearchQuery.trim().toLowerCase();
   const list = DATA.student_records.filter(r=>!r.archived && srSupMatch(r) && (
     !q ||
@@ -2012,13 +2025,14 @@ function studentRecordCard(r){
   // === تعديل: تم حذف payCol و trCol (الحقول المالية) ===
   const cycleCol = srCycleColor(r.subscriptionCycle);
   const svcCol = srServiceColor(r.serviceType);
-  return `<div class="sr-card">
+  const attTone = attendanceToneOf(r.id);
+  return `<div class="sr-card att-${attTone}">
     ${isOwner()?`<button class="corner-del" title="حذف" onclick="event.stopPropagation();deleteRecord('student_records','${r.id}','${jsAttr(r.studentName)}')">${ICON.trash}</button>`:''}
     <!-- === تعديل: شارة اسم المشرفة التي أضافت الطالب (للمالك فقط) === -->
     ${isOwner()?`<div><span class="sr-owner-badge ${r.supervisorId?'':'none'}" style="${r.supervisorId?supBadgeStyle(r.supervisorId):''}">${r.supervisorId?`👤 أضافته: ${esc(supervisorLabel(r.supervisorId))}`:'👤 بدون مشرفة (سجل قديم)'}</span></div>`:''}
     <div class="sr-head" onclick="openStudentRecordModal('${r.id}')" style="cursor:pointer;">
       <div>
-        <div class="sr-name">${esc(r.studentName)||'—'}</div>
+        <div class="sr-name">${esc(r.studentName)||'—'} ${attToneBadge(attTone)}</div>
         <div class="sr-teacher">👩‍🏫 ${esc(r.teacherName)||'—'}</div>
         ${r.studentPhone?`<div class="sr-phone">📱 ${esc(r.studentPhone)}</div>`:''}
       </div>
@@ -2519,6 +2533,7 @@ function pageScheduleSessions(){
       <h1 class="page-title">الحصص والجدول</h1>
       <!-- === تعديل: تم حذف زر "إضافة" من صفحة الجدول (الإضافة من بيانات الطلاب أو الصفحة الرئيسية) === -->
     </div>
+    <div class="sched-search-wrap"><input class="sr-search" id="schedSearchInput" placeholder="🔍 ابحث في الجدول: طالب، معلمة، رقم، مادة، أو أي بيان في الكارت..." value="${escAttr(schedQuery)}" oninput="schedQuery=this.value; renderSchedList();"></div>
     <!-- === تعديل: شريط أيام جديد (إيموجي + عدد الحصص + تمييز اليوم الحالي واليوم النشط) === -->
     <div class="day-strip" id="dayStrip">
       ${DAYS.map((d,i)=>{
@@ -2528,7 +2543,7 @@ function pageScheduleSessions(){
         return `<button class="day-pill ${scheduleDay===i?'active':''} ${isToday?'today':''}" onclick="setScheduleDay(${i})"><span class="dp-emoji">${DAY_EMOJIS[i]}</span><span class="dp-name">${d}</span><span class="dp-tag">${tag}</span></button>`;
       }).join('')}
     </div>
-    <div class="${anim?'day-anim':''}">${renderDaySchedule()}</div>
+    <div class="${anim?'day-anim':''}" id="schedListWrap">${renderDaySchedule()}</div>
   `;
 }
 // === تعديل: دوال جديدة لشريط الأيام ===
@@ -2551,6 +2566,7 @@ function centerActiveDayPill(){
   st.scrollLeft += (r.left + r.width/2) - (sr.left + sr.width/2);
 }
 function renderDaySchedule(){
+    _attToneMap = null; // === v17: إعادة حساب ألوان الالتزام مع كل رسم ===
     const day = DAYS[scheduleDay];
     const daySessions = (isOwner() ? DATA.sessions : []).filter(s => !s.archived && s.slots && s.slots.some(sl => sl.day === day));
     daySessions.sort((a, b) => {
@@ -2565,22 +2581,23 @@ function renderDaySchedule(){
     DATA.student_records.filter(r => !r.archived && r.slots && r.slots.length).forEach(r => {
         r.slots.filter(sl => sl.day === day && sl.time).forEach(sl => {
             if(ppAway(r.id, cardDate, sl.time)) return; // === تعديل (التأجيلات): الحصة المؤجلة تختفي من يومها ===
-            recordItems.push({ t: sl.time, html: recordClassCard(r, sl, cardDate) });
+            recordItems.push({ t: sl.time, html: recordClassCard(r, sl, cardDate), hay: schedHaystackRecord(r, sl) });
         });
     });
     // === تعديل (التأجيلات): الحصص المؤجلة إلى هذا التاريخ تظهر هنا بشارة صفراء ===
     // === إصلاح (التأجيلات): نسخة الحصة المؤجلة تظهر في تبويب يوم نقلها بتاريخها الفعلي (مثال: من الجمعة للسبت القادم) ===
     ppCopiesForTab(scheduleDay).forEach(({f, r}) => {
-        recordItems.push({ t: f.postponedToTime, html: recordClassCard(r, { day, time: f.postponedToTime }, f.postponedToDate, f) });
+        recordItems.push({ t: f.postponedToTime, html: recordClassCard(r, { day, time: f.postponedToTime }, f.postponedToDate, f), hay: schedHaystackRecord(r, { day, time: f.postponedToTime }, f) });
     });
     _attMap = null; // === تعديل: تفريغ الخريطة المؤقتة بعد بناء البطاقات ===
     // === تعديل: دمج بطاقات الحصص القديمة مع بطاقات بيانات الطلاب وترتيبها بالوقت ===
-    const items = daySessions.map(s => ({ t: (s.slots.find(sl => sl.day === day)?.time || ''), html: sessionCard(s) })).concat(recordItems);
+    const items = daySessions.map(s => ({ t: (s.slots.find(sl => sl.day === day)?.time || ''), html: sessionCard(s), hay: schedHaystackSession(s) })).concat(recordItems);
     items.sort((a, b) => a.t.localeCompare(b.t));
+    const shown = items.filter(i => schedHayMatches(schedQuery, i.hay));
     return `
-        <div class="page-sub" style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">${items.length} حصة يوم ${day}</div>
+        <div class="page-sub" style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">${shown.length} حصة يوم ${day}${schedQuery.trim() && shown.length !== items.length ? ' • نتائج البحث' : ''}</div>
         <div class="list">
-        ${items.length? items.map(i=>i.html).join('') : `<div class="empty">${ICON.empty}<div>لا توجد حصص</div></div>`}
+        ${shown.length? shown.map(i=>i.html).join('') : `<div class="empty">${ICON.empty}<div>${schedQuery.trim()?'لا توجد نتائج مطابقة في جدول هذا اليوم':'لا توجد حصص'}</div></div>`}
         </div>
     `;
 }
@@ -2628,7 +2645,8 @@ function paymentBadge(r){
     : `<span class="badge" style="background:#fee2e2;color:#b91c1c">لم يدفع</span>`;
 }
 function recordClassCard(r, sl, date, hop){
-  return `<div class="session-card">
+  const attTone = attendanceToneOf(r.id);
+  return `<div class="session-card att-${attTone}">
     <div class="sc-header" onclick="openStudentRecordModal('${r.id}')">
       <div class="sc-time">${esc(formatTime12(sl.time))}</div>
       <div class="sc-info">
@@ -2637,7 +2655,7 @@ function recordClassCard(r, sl, date, hop){
         ${ppBadge(hop)}${balanceChip(r)}<!-- === تعديل: عداد رصيد الحصص (المستهلك من الإجمالي) === -->
       </div>
       <div style="margin-right:auto;">
-        ${paymentBadge(r)}<!-- === تعديل: حالة الدفع بدل كلمة "مشترك" (نفس الحجم والمكان) === -->
+        ${attToneBadge(attTone)}${paymentBadge(r)}<!-- === تعديل: حالة الدفع بدل كلمة "مشترك" (نفس الحجم والمكان) === -->
       </div>
     </div>
     <div class="sc-wa-buttons">
@@ -2741,6 +2759,7 @@ async function setFollowupStatus(recordId, date, time, status){
   const ok = await upsertFollowup(r, date, time, patch);
   if(!ok) return;
   delete pendingFuNotes[key];
+  _attToneMap = null;
   render();
   showToast('تم تسجيل الحصة: ' + status);
 }
@@ -4230,9 +4249,104 @@ async function callResetSupervisorPassword(id, password){
 }
 // === نهاية إضافات v16 ===
 
+// =====================================================================
+// === v17: بحث الجدول اللحظي + ألوان الالتزام التراكمي للحضور
+// إضافات فقط — لا تلغي أي دالة قديمة.
+// =====================================================================
+
+let schedQuery = '';
+let _attToneMap = null;
+
+function schedHayMatches(q, parts){
+  const raw = String(q || '').trim();
+  if(!raw) return true;
+  const nq = raw.toLowerCase();
+  const digits = toLatinDigits(nq).replace(/\D/g, '');
+  const blob = (parts || []).map(p => String(p == null ? '' : p).toLowerCase()).join(' • ');
+  if(blob.indexOf(nq) !== -1) return true;
+  if(digits.length >= 3){
+    const hay = toLatinDigits(blob).replace(/\D/g, '');
+    if(hay.indexOf(digits) !== -1) return true;
+  }
+  return false;
+}
+
+function schedHaystackRecord(r, sl, hop){
+  return [
+    r.studentName, r.teacherName, r.studentPhone, r.teacherPhone, r.subject,
+    r.sessionDuration, r.studentPaymentStatus, r.groupLink, sl && sl.time, sl && sl.day,
+    hop && hop.reason, hop && hop.status, hop && hop.note
+  ];
+}
+
+function schedHaystackSession(s){
+  const student = DATA.students.find(x => x.id === s.studentId);
+  const teacher = DATA.teachers.find(x => x.id === s.teacherId);
+  return [
+    s.studentName, student && student.name, student && student.phone,
+    teacher && teacher.name, teacher && teacher.phone,
+    (s.subjects || []).join(' '), s.status, s.link
+  ];
+}
+
+function renderSchedList(){
+  const wrap = document.getElementById('schedListWrap');
+  if(wrap) wrap.innerHTML = renderDaySchedule();
+}
+
+function attendanceToneMap(){
+  if(_attToneMap) return _attToneMap;
+  const arr = DATA.followups || [];
+  const anchors = new Map();
+  (DATA.student_records || []).forEach(r => { if(r.cycleAnchor) anchors.set(r.id, r.cycleAnchor); });
+  const by = new Map();
+  for(let i = 0; i < arr.length; i++){
+    const f = arr[i];
+    if(f.status !== 'حضر' && f.status !== 'غاب') continue;
+    const a = anchors.get(f.recordId);
+    if(a && (f.date + ' ' + String(f.slotTime || '').slice(0, 5)) <= a) continue;
+    let list = by.get(f.recordId);
+    if(!list){ list = []; by.set(f.recordId, list); }
+    list.push(f);
+  }
+  const m = new Map();
+  by.forEach((list, id) => {
+    list.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.slotTime || '').localeCompare(String(b.slotTime || '')));
+    let consec = 0;
+    for(let i = list.length - 1; i >= 0; i--){
+      if(list[i].status === 'غاب') consec++;
+      else break;
+    }
+    const abs = list.filter(x => x.status === 'غاب').length;
+    const n = list.length;
+    const rate = (n - abs) / n;
+    let tone = 'ok';
+    if(consec >= 2 || (n >= 4 && rate < 0.5)) tone = 'risk';
+    else if(consec === 1 || (n >= 3 && rate < 0.75)) tone = 'warn';
+    m.set(id, tone);
+  });
+  _attToneMap = m;
+  return m;
+}
+
+function attendanceToneOf(recordId){
+  return attendanceToneMap().get(recordId) || 'none';
+}
+
+function attToneBadge(tone){
+  if(tone === 'ok') return `<span class="att-pill att-ok" title="ملتزم في الحضور عبر حصصه">🟢 ملتزم</span>`;
+  if(tone === 'warn') return `<span class="att-pill att-warn" title="غياب أو تراجع تراكمي — تنبيه مبكر">🟡 تنبيه</span>`;
+  if(tone === 'risk') return `<span class="att-pill att-risk" title="غياب متكرر عبر الحصص">🔴 غياب متكرر</span>`;
+  return '';
+}
+
+function resetAttToneCache(){ _attToneMap = null; }
+// === نهاية إضافات v17 ===
+
+
 
 
 
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4f393c8287dc123',t:'MTc5Mjc4ODI0MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a536b11cc88a164b',t:'MTc5MzQ5MTk4Nw=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a536b11cc88a164b',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
