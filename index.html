@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261103180000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261103200000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -235,6 +235,15 @@ input,select,textarea{font-family:inherit;}
 .fu-sup{flex:none;display:flex;align-items:center;gap:8px;border:1px solid var(--fu-bd,#e2e8f0);background:var(--fu-bg,#fff);color:var(--fu-c,#334155);border-radius:16px;padding:9px 14px;cursor:pointer;font-weight:800;font-size:12.5px;transition:transform .15s,box-shadow .15s,border-color .15s,background .15s;}
 .fu-sup-ava{width:28px;height:28px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#fff;box-shadow:0 1px 4px rgba(15,23,42,.08);}
 .fu-sup-name{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fu-sup-text{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;}
+.fu-sup-day{font-size:10px;font-weight:800;opacity:.82;white-space:nowrap;}
+.fu-sup.on .fu-sup-day{opacity:.95;}
+.sr-used{margin:8px 0 2px;padding:8px 10px;border-radius:12px;background:#f8fafc;border:1px solid var(--line);}
+.sr-used-lbl{display:block;font-size:10px;font-weight:800;color:var(--text-dim);margin-bottom:6px;}
+.sr-used-row{display:flex;align-items:center;gap:8px;}
+.sr-used-btn{width:28px;height:28px;border:none;border-radius:8px;background:#e0f2fe;color:#0369a1;font-size:16px;font-weight:800;cursor:pointer;line-height:1;}
+.sr-used-inp{width:52px;text-align:center;padding:6px 4px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-weight:800;background:#fff;}
+.sr-used-of{font-size:12px;font-weight:800;color:var(--text-dim);white-space:nowrap;}
 .fu-sup.on{background:var(--fu-c,#0f766e);color:#fff;border-color:var(--fu-c,#0f766e);box-shadow:0 0 0 3px rgba(20,184,166,.28),0 10px 22px rgba(15,118,110,.35);transform:translateY(-1px);}
 .fu-sup.on .fu-sup-ava{background:rgba(255,255,255,.18);box-shadow:none;}
 .arc-del{width:28px;height:28px;min-width:28px;border:none;border-radius:50%;background:#fff1f2;color:#e11d48;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:6px;opacity:.85;}
@@ -1187,6 +1196,7 @@ function mapStudentRecord(r){
     supervisorId:r.supervisor_id||'', // === تعديل: معرّف المشرفة صاحبة الطالب ===
     groupLink:r.group_link||'', // === تعديل: رابط جروب الواتساب ===
     cycleAnchor:r.cycle_anchor||'', // === تعديل: بداية دورة الاشتراك الحالية (يُضبط عند "تجديد الاشتراك" من المدفوعات) ===
+    sessionUsedOffset: parseInt(r.session_used_offset, 10) || 0, // === v23: فرق التعديل اليدوي عن عدّاد الحضور ===
     archived:!!r.archived
   };
 }
@@ -2083,6 +2093,7 @@ function studentRecordCard(r){
       ${r.sessionCount?`<span class="sr-chip" style="background:#f1f5f9;color:#475569;">🔢 ${esc(r.sessionCount)} حصة${sessionTotal(r)?` • تبقّى ${Math.max(0, sessionTotal(r)-displayAttended(r))}`:''}</span>`:''}
       ${r.sessionDuration?`<span class="sr-chip" style="background:#f1f5f9;color:#475569;">⏱️ ${esc(r.sessionDuration)} د</span>`:''}
     </div>
+    ${srUsedEditor(r)}
     <!-- === تعديل: تم حذف اللوحتين الماليتين، وإضافة مواعيد الحصص بدلاً منهما === -->
     ${(r.slots&&r.slots.length)?`<div class="sr-chips" style="margin-bottom:0;">${r.slots.map(sl=>`<span class="sr-chip" style="background:#ecfeff;color:#0e7490;">🗓️ ${esc(sl.day)} ${esc(formatTime12(sl.time))}</span>`).join('')}</div>`:''}
     <div class="sr-actions">
@@ -3551,12 +3562,15 @@ async function renewSubscription(id){
   if(!window.confirm(`تجديد اشتراك "${r.studentName}"؟\n\nسيُصفَّر عداد الحصص (${used}${total ? ' من ' + total : ''}) ليبدأ من 0، وتعود الحالة إلى "معلق".`)) return;
   const now = new Date();
   const anchor = localDateStr(now) + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-  const old = { a: r.cycleAnchor, p: r.studentPaymentStatus };
-  r.cycleAnchor = anchor; r.studentPaymentStatus = 'معلق'; render();
-  const { error } = await sb.from('student_records').update({ student_payment_status: 'معلق', cycle_anchor: anchor }).eq('id', id);
+  const old = { a: r.cycleAnchor, p: r.studentPaymentStatus, o: r.sessionUsedOffset || 0 };
+  r.cycleAnchor = anchor; r.studentPaymentStatus = 'معلق'; r.sessionUsedOffset = 0; render();
+  let { error } = await sb.from('student_records').update({ student_payment_status: 'معلق', cycle_anchor: anchor, session_used_offset: 0 }).eq('id', id);
+  if(error && /session_used_offset/i.test(String(error.message||'')+String(error.details||'')+String(error.hint||''))){
+    ({ error } = await sb.from('student_records').update({ student_payment_status: 'معلق', cycle_anchor: anchor }).eq('id', id));
+  }
   if(error){
     const cur = DATA.student_records.find(x=>x.id===id);
-    if(cur){ cur.cycleAnchor = old.a; cur.studentPaymentStatus = old.p; }
+    if(cur){ cur.cycleAnchor = old.a; cur.studentPaymentStatus = old.p; cur.sessionUsedOffset = old.o; }
     render();
     const missing = /cycle_anchor/i.test(String(error.message||'') + String(error.details||'') + String(error.hint||''));
     showToast(missing ? '⚠️ لازم تنفّذ كود SQL الخاص بالتجديد في Supabase أولاً (عمود cycle_anchor)' : 'تعذر التجديد: ' + dbErrorText(error));
@@ -4493,12 +4507,12 @@ let _payCycleBusy = false;
 
 function packExhausted(r){
   const total = sessionTotal(r);
-  return total > 0 && attendedCount(r.id) >= total;
+  return total > 0 && sessionUsedOf(r) >= total;
 }
 
 // لو الباقة المدفوعة خلصت وقبل ما يتكتب التجديد في القاعدة: العداد يتعرض من الصفر فوراً
 function displayAttended(r){
-  const used = attendedCount(r.id);
+  const used = sessionUsedOf(r);
   if(storedPayKind(r && r.studentPaymentStatus) === 'دفع' && packExhausted(r)) return 0;
   return used;
 }
@@ -4529,13 +4543,17 @@ async function syncPayCycles(){
   try{
     for(let i = 0; i < jobs.length; i++){
       const job = jobs[i], r = job.r;
-      const oldP = r.studentPaymentStatus, oldA = r.cycleAnchor;
+      const oldP = r.studentPaymentStatus, oldA = r.cycleAnchor, oldOff = r.sessionUsedOffset || 0;
       if(job.kind === 'roll'){
         // انتهت باقة مدفوعة: دورة جديدة من الصفر + معلق
         r.studentPaymentStatus = 'معلق';
         r.cycleAnchor = stamp;
-        const { error } = await sb.from('student_records').update({ student_payment_status: 'معلق', cycle_anchor: stamp }).eq('id', r.id);
-        if(error){ r.studentPaymentStatus = oldP; r.cycleAnchor = oldA; }
+        r.sessionUsedOffset = 0;
+        const { error } = await sb.from('student_records').update({ student_payment_status: 'معلق', cycle_anchor: stamp, session_used_offset: 0 }).eq('id', r.id);
+        if(error && /session_used_offset/i.test(String(error.message||'')+String(error.details||'')+String(error.hint||''))){
+          const r2 = await sb.from('student_records').update({ student_payment_status: 'معلق', cycle_anchor: stamp }).eq('id', r.id);
+          if(r2.error){ r.studentPaymentStatus = oldP; r.cycleAnchor = oldA; r.sessionUsedOffset = oldOff; }
+        } else if(error){ r.studentPaymentStatus = oldP; r.cycleAnchor = oldA; r.sessionUsedOffset = oldOff; }
       } else {
         // طلاب كانوا "لم يدفع" ولسه في الباقة: ترحيل دفعة واحدة إلى معلق
         r.studentPaymentStatus = 'معلق';
@@ -4559,9 +4577,10 @@ function fuSupervisorBar(){
   const card = (id, label, on) => {
     const c = id ? supColor(id) : { fg:'#0f766e', bg:'#ecfdf5', bd:'#99f6e4' };
     const clickId = id ? jsAttr(id) : 'all';
+    const n = fuTodaySessionsFor(id || '');
     return `<button type="button" class="fu-sup ${on?'on':''}" style="--fu-c:${c.fg};--fu-bg:${c.bg};--fu-bd:${c.bd};" onclick="setFuSupervisor('${clickId}')">
       <span class="fu-sup-ava">${id ? '👤' : '📋'}</span>
-      <span class="fu-sup-name">${esc(label)}</span>
+      <span class="fu-sup-text"><span class="fu-sup-name">${esc(label)}</span><span class="fu-sup-day">اليوم • ${n} ${n===1?'حصة':'حصص'}</span></span>
     </button>`;
   };
   return `<div class="fu-sup-bar">${card('', 'كل المشرفات', fuSupervisor==='all')}${ids.map(id => card(id, supervisorLabel(id), fuSupervisor===id)).join('')}</div>`;
@@ -4584,6 +4603,93 @@ async function deleteArchivedRecord(type, id, label){
   showToast('تم الحذف نهائيًا من الأرشيف');
 }
 // === نهاية إضافات v20 ===
+
+// === إضافات v23: عدّاد الحصص اليدوي في بيانات الطلاب + حصص اليوم على شريط المشرفات ===
+function sessionUsedOffsetOf(r){
+  const n = parseInt(r && r.sessionUsedOffset, 10);
+  return Number.isFinite(n) ? n : 0;
+}
+function sessionUsedOf(r){
+  if(!r || !r.id) return 0;
+  return Math.max(0, attendedCount(r.id) + sessionUsedOffsetOf(r));
+}
+function fuTodaySessionsFor(supId){
+  const day = DAYS[todayArIdx()];
+  const todayStr0 = localDateStr(new Date());
+  let n = 0;
+  (DATA.student_records || []).forEach(r => {
+    if(r.archived) return;
+    if(supId && r.supervisorId !== supId) return;
+    n += (r.slots || []).filter(sl => sl.day === day && sl.time).length;
+  });
+  if(!supId){
+    n += (DATA.sessions || []).filter(x => !x.archived && x.slots && x.slots.some(sl => sl.day === day)).length;
+  }
+  (DATA.followups || []).forEach(f => {
+    if(f.status !== 'تأجيل' || f.postponedToDate !== todayStr0 || !f.postponedToTime) return;
+    if(supId && f.supervisorId !== supId) return;
+    const rr = (DATA.student_records || []).find(x => x.id === f.recordId);
+    if(rr && !rr.archived) n++;
+  });
+  return n;
+}
+function srUsedEditor(r){
+  const total = sessionTotal(r);
+  const used = displayAttended(r);
+  const of = total ? ('من ' + total) : '';
+  return `<div class="sr-used" onclick="event.stopPropagation()">
+    <span class="sr-used-lbl">الحصص التي تمت</span>
+    <div class="sr-used-row">
+      <button type="button" class="sr-used-btn" title="نقص حصة" onclick="event.stopPropagation();adjustSessionUsed('${r.id}',-1)">−</button>
+      <input class="sr-used-inp" inputmode="numeric" value="${used}" onchange="setSessionUsed('${r.id}', this.value)" onclick="event.stopPropagation()">
+      <span class="sr-used-of">${of ? of : ''}</span>
+      <button type="button" class="sr-used-btn" title="زيادة حصة" onclick="event.stopPropagation();adjustSessionUsed('${r.id}',1)">+</button>
+    </div>
+  </div>`;
+}
+function canEditSessionUsed(r){
+  if(!CURRENT_PROFILE) return false;
+  if(isOwner()) return true;
+  if(CURRENT_PROFILE.role === 'supervisor'){
+    if(!r) return true;
+    if(!r.supervisorId || r.supervisorId === CURRENT_PROFILE.id) return true;
+  }
+  return false;
+}
+async function adjustSessionUsed(id, delta){
+  const r = DATA.student_records.find(x => x.id === id); if(!r) return;
+  await setSessionUsed(id, displayAttended(r) + delta);
+}
+async function setSessionUsed(id, raw){
+  if(!CURRENT_PROFILE) return;
+  const r = DATA.student_records.find(x => x.id === id); if(!r) return;
+  if(!canEditSessionUsed(r)) return;
+  let n = parseInt(toLatinDigits(String(raw == null ? '' : raw)), 10);
+  if(!Number.isFinite(n) || n < 0) n = 0;
+  const total = sessionTotal(r);
+  if(total > 0 && n > total) n = total;
+  const auto = attendedCount(id);
+  const offset = n - auto;
+  const old = r.sessionUsedOffset;
+  r.sessionUsedOffset = offset;
+  const wrap = document.getElementById('srListWrap');
+  if(wrap && typeof renderSrList === 'function'){
+    try{ renderSrList(); }catch(e){ render(); }
+  } else render();
+  const { error } = await sb.from('student_records').update({ session_used_offset: offset }).eq('id', id);
+  if(error){
+    r.sessionUsedOffset = old;
+    render();
+    const missing = /session_used_offset/i.test(String(error.message||'') + String(error.details||'') + String(error.hint||'') + String(error.code||''));
+    showToast(missing ? '⚠️ نفّذي ملف SQL الإصدار 23 في Supabase (عمود session_used_offset)' : 'تعذر تحديث عداد الحصص: ' + dbErrorText(error));
+    return;
+  }
+  _attMap = null;
+  await syncPayCycles();
+  render();
+}
+// === نهاية إضافات v23 ===
+
 
 
 
