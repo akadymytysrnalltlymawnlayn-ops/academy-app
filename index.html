@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261103200000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261105120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -324,7 +324,7 @@ html.has-session #authScreen{display:none;}
 .rem-bell.on{background:#ccfbf1;}
 .rem-bell.blocked{background:#fee2e2;}
 .rem-bell.off::after{content:'';position:absolute;top:2px;left:2px;width:9px;height:9px;border-radius:50%;background:#f59e0b;border:2px solid #fff;}
-/* === تعديل: قسم المدفوعات الجديد (للمالك فقط) - كروت أولياء الأمور وصفوف الطلاب والفلاتر === */
+/* === تعديل: قسم المدفوعات الجديد - كروت أولياء الأمور وصفوف الطلاب والفلاتر === */
 .pay-grid{display:grid;grid-template-columns:1fr;gap:14px;}
 @media(min-width:760px){.pay-grid{grid-template-columns:repeat(2,1fr);}}
 @media(min-width:1100px){.pay-grid{grid-template-columns:repeat(3,1fr);}}
@@ -388,6 +388,17 @@ html.has-session #authScreen{display:none;}
 .pay-alert{background:linear-gradient(135deg,#fef2f2,#fff7ed);border:1px solid #fecaca;color:#9a3412;border-radius:14px;padding:10px 12px;font-size:12.5px;font-weight:800;margin:0 0 12px;line-height:1.7;}
 .pay-chips .fu-chip{padding:8px 14px;border-radius:999px;font-size:12px;}
 .pay-when{margin-top:4px;font-size:11px;font-weight:800;color:#0f766e;background:#f0fdfa;display:inline-block;padding:3px 8px;border-radius:999px;}
+.pay-due-btn,.pay-due-badge{display:inline-flex;align-items:center;gap:6px;margin-top:6px;border:0;cursor:pointer;font-weight:800;font-size:11.5px;border-radius:999px;padding:5px 11px;font-family:inherit;}
+.pay-due-btn{background:#eef2ff;color:#3730a3;box-shadow:0 0 0 1px #c7d2fe;}
+.pay-due-badge.tone-ok{background:#eef2ff;color:#3730a3;box-shadow:0 0 0 1px #c7d2fe;}
+.pay-due-badge.tone-soon{background:#fff7ed;color:#c2410c;box-shadow:0 0 0 2px #fdba74;}
+.pay-due-badge.tone-today{background:#fef3c7;color:#92400e;box-shadow:0 0 0 2px #f59e0b;}
+.pay-due-badge.tone-over{background:#fef2f2;color:#b91c1c;box-shadow:0 0 0 2px #f87171;}
+.pay-seg-ro{pointer-events:none;}
+.pay-seg-ro span{border:none;background:transparent;border-radius:9px;padding:6px 10px;font-size:11.5px;font-weight:700;color:var(--text-dim);}
+.pay-seg-ro span.on.paid{background:#22c55e;color:#fff;box-shadow:0 2px 6px rgba(34,197,94,.35);}
+.pay-seg-ro span.on.hold{background:#f59e0b;color:#fff;box-shadow:0 2px 6px rgba(245,158,11,.35);}
+.pay-seg-ro span.on.unpaid{background:#ef4444;color:#fff;box-shadow:0 2px 6px rgba(239,68,68,.3);}
 .pay-modal-note{font-size:12px;color:var(--text-dim);line-height:1.85;margin:0 0 12px;}
 .pay-card{border-radius:20px;}
 .pay-row{border-radius:16px;}
@@ -1101,7 +1112,7 @@ function esc(str){ const d=document.createElement('div'); d.textContent=str==nul
 function jsAttr(str){ return String(str==null?'':str).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/[\r\n]/g,' ').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); } // === تعديل: حماية النص داخل أزرار onclick من كسر الخاصية ===
 
 let CURRENT_PROFILE = null;
-const SUPERVISOR_ALLOWED_ROUTES = ['schedule_sessions','student_records','followups','postponed','teachers','archive']; // === v13: إضافة المعلمين (بصلاحية الإضافة) والأرشيف // === تعديل: حذف تبويب متابعة الحضور القديم، والاعتماد على تبويب المتابعة الجديد ===
+const SUPERVISOR_ALLOWED_ROUTES = ['schedule_sessions','student_records','followups','postponed','teachers','archive','payments']; // === v13: إضافة المعلمين (بصلاحية الإضافة) والأرشيف // === تعديل: حذف تبويب متابعة الحضور القديم، والاعتماد على تبويب المتابعة الجديد === // === v24: تبويب المدفوعات للمشرفات (طلابهم فقط) ===
 async function fetchProfile(){
   try{
     const { data:{ user } } = await sb.auth.getUser();
@@ -1197,6 +1208,7 @@ function mapStudentRecord(r){
     groupLink:r.group_link||'', // === تعديل: رابط جروب الواتساب ===
     cycleAnchor:r.cycle_anchor||'', // === تعديل: بداية دورة الاشتراك الحالية (يُضبط عند "تجديد الاشتراك" من المدفوعات) ===
     sessionUsedOffset: parseInt(r.session_used_offset, 10) || 0, // === v23: فرق التعديل اليدوي عن عدّاد الحضور ===
+    paymentDueDate: String(r.payment_due_date || '').slice(0, 10), // === v24: موعد الدفع (تاريخ فقط) ===
     archived:!!r.archived
   };
 }
@@ -3353,7 +3365,7 @@ async function saveSession(id){ if(!isOwner()) return showToast('هذا الإج
   showToast('تم الحفظ');
 }
 
-// ============ المدفوعات (للمالك فقط): تجميع الطلاب حسب رقم هاتف ولي الأمر ============
+// ============ المدفوعات: تجميع الطلاب حسب رقم هاتف ولي الأمر (المالك: الكل / المشرفة: طلابها) ============
 // === تعديل: قسم جديد بالكامل - يقرأ من بيانات الطلاب (student_records) ومن متابعات الحضور، ولا يغيّر أي بيانات إلا عند ضغطك على دفع / لم يدفع / تجديد ===
 let payFilter = 'all', payQuery = '';
 
@@ -3379,11 +3391,58 @@ function payState(r){
   return { total, used, paid, kind, state, rank, pct: total ? Math.min(100, Math.round(used/total*100)) : 0 };
 }
 // بناء النموذج: كل رقم ولي أمر = كارت واحد يضم كل إخوته (الطلاب بلا رقم يظهر كل منهم في كارت مستقل)
+function payDueTone(iso){
+  const d = String(iso || '').slice(0, 10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return '';
+  const today = localDateStr(new Date());
+  if(d < today) return 'over';
+  if(d === today) return 'today';
+  const a = d.split('-').map(Number), b = today.split('-').map(Number);
+  const da = new Date(a[0], a[1]-1, a[2]);
+  const db = new Date(b[0], b[1]-1, b[2]);
+  const diff = Math.round((da - db) / 86400000);
+  if(diff > 0 && diff <= 3) return 'soon';
+  return 'ok';
+}
+function formatPayDue(iso){
+  const s = String(iso || '').slice(0, 10);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return s;
+  return m[3] + '/' + m[2] + '/' + m[1];
+}
+function payDueRank(iso){
+  const t = payDueTone(iso);
+  if(t === 'over') return 0;
+  if(t === 'today') return 1;
+  if(t === 'soon') return 2;
+  if(t) return 3;
+  return 4;
+}
+function canSeePayments(){
+  return isOwner() || !!(CURRENT_PROFILE && CURRENT_PROFILE.role === 'supervisor');
+}
+function canEditPayDue(r){
+  if(!CURRENT_PROFILE) return false;
+  if(isOwner()) return true;
+  if(CURRENT_PROFILE.role === 'supervisor'){
+    if(!r) return true;
+    return r.supervisorId === CURRENT_PROFILE.id;
+  }
+  return false;
+}
+function payRecords(){
+  const mine = !!(CURRENT_PROFILE && CURRENT_PROFILE.role === 'supervisor' && !isOwner());
+  const uid = CURRENT_PROFILE && CURRENT_PROFILE.id;
+  return DATA.student_records.filter(r => {
+    if(r.archived) return false;
+    if(mine && r.supervisorId !== uid) return false;
+    return true;
+  });
+}
 function payBuildModel(){
   _attMap = buildAttendanceMap();
   const groups = new Map();
-  DATA.student_records.forEach(r=>{
-    if(r.archived) return;
+  payRecords().forEach(r=>{
     const pk = payPhoneKey(r.studentPhone);
     const key = pk ? 'p:' + pk : 'i:' + r.id;
     let g = groups.get(key);
@@ -3401,6 +3460,10 @@ function payMatchFilter(s, f){
   if(f === 'unpaid') return s.st.kind === 'لم يدفع';
   if(f === 'paid') return s.st.kind === 'دفع';
   if(f === 'hold') return s.st.kind === 'معلق';
+  if(f === 'due'){
+    const t = payDueTone(s.r && s.r.paymentDueDate);
+    return t === 'over' || t === 'today' || t === 'soon';
+  }
   return true;
 }
 function payMatchQuery(s, g, q, qDigits){
@@ -3417,7 +3480,7 @@ function payVisible(g){
   const qDigits = toLatinDigits(q).replace(/\D/g,'');
   return g.students
     .filter(s=>payMatchFilter(s, payFilter) && payMatchQuery(s, g, q, qDigits))
-    .sort((a,b)=> (a.st.rank - b.st.rank) || String(a.r.studentName||'').localeCompare(String(b.r.studentName||''), 'ar'));
+    .sort((a,b)=> (a.st.rank - b.st.rank) || (payDueRank(a.r.paymentDueDate) - payDueRank(b.r.paymentDueDate)) || String(a.r.studentName||'').localeCompare(String(b.r.studentName||''), 'ar'));
 }
 // ترتيب الكروت: الأسوأ أولاً (المتأخرات ثم الأوشكوا ثم المستقرين)، وعند التساوي الأعلى استهلاكًا
 function payVisibleGroups(model){
@@ -3439,18 +3502,32 @@ function payStudentRow(s){
   const prog = st.total
     ? `<div class="pay-bar"><i style="width:${st.pct}%"></i></div><b>${st.used} من ${st.total}</b>`
     : `<div class="pay-bar"><i style="width:0%"></i></div><b>حضر ${st.used}</b>`;
-  return `<div class="pay-row st-${st.state}">
-    <div class="pay-r1"><div class="pay-name" title="${escAttr(r.studentName||'')}">${esc(r.studentName)||'—'}</div><span class="pay-chip st-${st.state}">${PAY_STATE_LABEL[st.state]}</span></div>
-    ${meta ? `<div class="pay-meta">${meta}</div>` : ''}
-    ${st.paid && r.studentPaymentDate ? `<div class="pay-when">📅 ${esc(formatPayWhen(r.studentPaymentDate))}</div>` : ''}
-    <div class="pay-prog">${prog}</div>
-    <div class="pay-r3">
-      <div class="pay-seg">
+  const due = String(r.paymentDueDate || '').slice(0, 10);
+  const dueTone = payDueTone(due);
+  const dueHtml = due
+    ? `<button type="button" class="pay-due-badge tone-${dueTone}" title="تعديل موعد الدفع" onclick="openPayDueModal('${jsAttr(r.id)}')">📅 موعد الدفع ${esc(formatPayDue(due))}</button>`
+    : `<button type="button" class="pay-due-btn" onclick="openPayDueModal('${jsAttr(r.id)}')">📅 موعد الدفع</button>`;
+  const canPay = isOwner();
+  const actions = canPay
+    ? `<div class="pay-seg">
         <button class="${st.kind==='دفع'?'on paid':''}" onclick="setPayStatus('${jsAttr(r.id)}', true)">دفع</button>
         <button class="${st.kind==='معلق'?'on hold':''}" onclick="setPayKind('${jsAttr(r.id)}', 'معلق')">معلق</button>
         <button class="${st.kind==='لم يدفع'?'on unpaid':''}" onclick="setPayStatus('${jsAttr(r.id)}', false)">لم يدفع</button>
       </div>
-      <button class="pay-renew ${st.state==='done'?'hot':''}" title="تصفير عداد الحصص وبدء دورة جديدة" onclick="renewSubscription('${jsAttr(r.id)}')">🔄 تجديد</button>
+      <button class="pay-renew ${st.state==='done'?'hot':''}" title="تصفير عداد الحصص وبدء دورة جديدة" onclick="renewSubscription('${jsAttr(r.id)}')">🔄 تجديد</button>`
+    : `<div class="pay-seg pay-seg-ro" title="حالة الدفع">
+        <span class="${st.kind==='دفع'?'on paid':''}">دفع</span>
+        <span class="${st.kind==='معلق'?'on hold':''}">معلق</span>
+        <span class="${st.kind==='لم يدفع'?'on unpaid':''}">لم يدفع</span>
+      </div>`;
+  return `<div class="pay-row st-${st.state}">
+    <div class="pay-r1"><div class="pay-name" title="${escAttr(r.studentName||'')}">${esc(r.studentName)||'—'}</div><span class="pay-chip st-${st.state}">${PAY_STATE_LABEL[st.state]}</span></div>
+    ${meta ? `<div class="pay-meta">${meta}</div>` : ''}
+    ${st.paid && r.studentPaymentDate ? `<div class="pay-when">📅 ${esc(formatPayWhen(r.studentPaymentDate))}</div>` : ''}
+    ${dueHtml}
+    <div class="pay-prog">${prog}</div>
+    <div class="pay-r3">
+      ${actions}
     </div>
   </div>`;
 }
@@ -3469,7 +3546,7 @@ function payGroupCard(x, totalInGroup){
       ${g.phone ? `<button class="icon-circle pay-wa" title="واتساب ولي الأمر" onclick="waOpen('${jsAttr(g.phone)}','')">${ICON.wa}</button>` : ''}
     </div>
     ${vis.map(payStudentRow).join('')}
-    ${(vis.length > 1 && unpaidVis > 0) ? `<button class="pay-all" onclick="payAllInGroup('${jsAttr(g.key)}')">✅ تسجيل دفع الكل (${unpaidVis})</button>` : ''}
+    ${(isOwner() && vis.length > 1 && unpaidVis > 0) ? `<button class="pay-all" onclick="payAllInGroup('${jsAttr(g.key)}')">✅ تسجيل دفع الكل (${unpaidVis})</button>` : ''}
   </div>`;
 }
 function payListHtml(model){
@@ -3481,7 +3558,7 @@ function payChip(id, label, n){
   return `<button class="fu-chip ${payFilter===id?'active':''}" onclick="setPayFilter('${id}')">${label} (${n})</button>`;
 }
 function pagePayments(){
-  if(!isOwner()) return ''; // === حماية: القسم للمالك فقط ===
+  if(!canSeePayments()) return ''; // === v24: المالك + المشرفات (كل مشرفة على طلابها) ===
   const model = payBuildModel();
   const all = []; model.forEach(g=>g.students.forEach(s=>all.push(s)));
   const cnt = f => all.filter(s=>payMatchFilter(s, f)).length;
@@ -3512,12 +3589,13 @@ function pagePayments(){
       ${payChip('done','🔴 انتهت',cnt('done'))}
       ${payChip('warn','🟠 أوشكت',cnt('warn'))}
       ${payChip('ok','🟢 رصيد متاح',cnt('ok'))}
+      ${payChip('due','📅 قرب الموعد',cnt('due'))}
     </div>
     <div class="sr-toolbar">
       <input class="sr-search" id="paySearchInput" placeholder="🔍 دوّر باسم الطالب أو رقم ولي الأمر..." value="${esc(payQuery)}" oninput="payQuery=this.value; renderPayList();">
     </div>
     <div id="payListWrap">${payListHtml(model)}</div>
-    ${legacyCount ? `<details class="pay-legacy"><summary>📂 طلاب النظام القديم (${legacyCount})</summary>${pagePaymentsLegacy()}</details>` : ''}
+    ${(isOwner() && legacyCount) ? `<details class="pay-legacy"><summary>📂 طلاب النظام القديم (${legacyCount})</summary>${pagePaymentsLegacy()}</details>` : ''}
   `;
 }
 function renderPayList(){
@@ -4689,6 +4767,59 @@ async function setSessionUsed(id, raw){
   render();
 }
 // === نهاية إضافات v23 ===
+
+// === إضافات v24: موعد الدفع على كارت المدفوعات (المالك + المشرفات) ===
+function openPayDueModal(id){
+  const r = DATA.student_records.find(x => x.id === id); if(!r) return;
+  if(!canEditPayDue(r)) return;
+  window._payDueId = id;
+  const cur = String(r.paymentDueDate || '').slice(0, 10);
+  const box = document.getElementById('modalBody');
+  if(!box) return;
+  box.innerHTML = `
+    <h3>موعد الدفع</h3>
+    <p class="pay-modal-note">حدّدي التاريخ المتوقع لتحصيل اشتراك <b>${esc(r.studentName || 'الطالب')}</b>. بعد الحفظ هيظهر شارة على الكارت عندك وعند المالك فورًا.</p>
+    <div class="field"><label>التاريخ</label><input id="f_payDue" type="date" value="${escAttr(cur)}"></div>
+    <div class="modal-actions">
+      <button class="save" onclick="savePayDueDate(false)">حفظ</button>
+      ${cur ? `<button class="cancel" onclick="savePayDueDate(true)">مسح الموعد</button>` : ''}
+      <button class="cancel" onclick="window._payDueId=null;closeModal();">إلغاء</button>
+    </div>`;
+  openModal();
+}
+async function savePayDueDate(clear){
+  if(!CURRENT_PROFILE) return;
+  const id = window._payDueId;
+  const r = DATA.student_records.find(x => x.id === id); if(!r) return;
+  if(!canEditPayDue(r)) return;
+  let val = null;
+  if(!clear){
+    const inp = document.getElementById('f_payDue');
+    const raw = inp ? String(inp.value || '').trim() : '';
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(raw)){ showToast('⚠️ اختاري تاريخ الدفع'); return; }
+    val = raw;
+  }
+  const old = r.paymentDueDate || '';
+  r.paymentDueDate = val || '';
+  window._payDueId = null;
+  try{ closeModal(); }catch(e){}
+  render();
+  let { error } = await sb.from('student_records').update({ payment_due_date: val }).eq('id', id);
+  if(error && /payment_due_date/i.test(String(error.message||'') + String(error.details||'') + String(error.hint||'') + String(error.code||''))){
+    r.paymentDueDate = old;
+    render();
+    showToast('⚠️ نفّذي ملف SQL الإصدار 24 في Supabase (عمود payment_due_date)');
+    return;
+  }
+  if(error){
+    r.paymentDueDate = old;
+    render();
+    showToast('تعذر حفظ موعد الدفع: ' + dbErrorText(error));
+    return;
+  }
+  showToast(val ? ('تم حفظ موعد الدفع: ' + formatPayDue(val)) : 'تم مسح موعد الدفع');
+}
+// === نهاية إضافات v24 ===
 
 
 
