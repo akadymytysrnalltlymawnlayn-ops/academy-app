@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261107120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261108120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -442,6 +442,20 @@ html.has-session #authScreen{display:none;}
 .st-legacy{margin-top:16px;}
 .st-legacy summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--text-dim);padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:12px;}
 @media(min-width:720px){.st-groups{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}.st-sub-grid{grid-template-columns:1fr 1fr 1fr;}}
+.st-badge-kid,.st-badge-sub{display:inline-flex;align-items:center;font-size:9px;font-weight:800;letter-spacing:.3px;border-radius:999px;padding:2px 7px;flex:none;}
+.st-badge-kid{background:#ccfbf1;color:#0f766e;}
+.st-badge-sub{background:#ffedd5;color:#c2410c;}
+.st-kid-title{margin:0;flex:1;min-width:0;font-size:13px;font-weight:800;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.st-sub-top{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.st-sub-h{flex:1;font-size:11px;font-weight:800;color:#9a3412;}
+.st-sub-del{border:0;background:#fff7ed;color:#c2410c;border-radius:7px;padding:4px 8px;font-size:10px;font-weight:800;cursor:pointer;}
+.st-sub-empty{font-size:11px;color:var(--text-dim);padding:6px 0;}
+.st-subs-h{font-size:11px;font-weight:800;color:#9a3412;margin-bottom:4px;}
+.st-add-student{display:block;width:100%;margin-top:8px;padding:9px;border:none;border-radius:10px;background:linear-gradient(135deg,#14b8a6,#0d9488);color:#fff;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(13,148,136,.25);}
+.st-add-sub{display:block;width:100%;margin-top:6px;padding:8px;border:1px dashed #fdba74;border-radius:10px;background:#fff7ed;color:#c2410c;font-size:12px;font-weight:800;cursor:pointer;}
+.st-gactions{margin-top:4px;}
+.st-link-meta{display:block;font-size:11px;font-weight:600;color:var(--text-dim);margin-top:2px;}
+.st-subs{margin-top:6px;background:#fffbeb;border:1px dashed #fdba74;border-radius:10px;padding:6px 8px;}
 .pay-modal-note{font-size:12px;color:var(--text-dim);line-height:1.85;margin:0 0 12px;}
 .pay-card{border-radius:20px;}
 .pay-row{border-radius:16px;}
@@ -5367,6 +5381,150 @@ async function saveStLedgerNew(){
 }
 // === نهاية إضافات v26 ===
 
+// === إضافات v27: اسم الطالب من بيانات الطلاب + فصل إضافة طالب عن اشتراك ===
+function stLedgerSubsOf(r){
+  return mapLedgerSubs(r && r.ledgerSubs);
+}
+function stKidHtml(r){
+  const subs = stLedgerSubsOf(r);
+  const ordinal = ['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن'];
+  const subHtml = subs.map((sub, idx) => `
+    <div class="st-sub">
+      <div class="st-sub-top">
+        <span class="st-badge-sub">اشتراك</span>
+        <span class="st-sub-h">الاشتراك ${ordinal[idx] || (idx+1)}</span>
+        <button type="button" class="st-sub-del" title="حذف الاشتراك" onclick="removeStLedgerSub('${jsAttr(r.id)}','${jsAttr(sub.id)}')">حذف</button>
+      </div>
+      <div class="st-sub-grid">
+        <label>البداية<input type="date" id="stl_start_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.startDate)}"></label>
+        <label>حالة الدفع<input type="text" id="stl_pstat_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.payStatus)}" placeholder="تم الدفع / معلق / نصف..."></label>
+        <label>تاريخ الدفع<input type="date" id="stl_pdate_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.payDate)}"></label>
+      </div>
+      <label class="st-notes">ملاحظات<input type="text" id="stl_notes_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.notes)}" placeholder="اختياري"></label>
+    </div>`).join('');
+  return `<article class="st-kid">
+    <div class="st-kid-top">
+      <span class="st-badge-kid">طالب</span>
+      <h3 class="st-kid-title">${esc(r.studentName) || '—'}</h3>
+      <input type="hidden" id="stl_name_${escAttr(r.id)}" value="${escAttr(r.studentName||'')}">
+      <button type="button" class="st-del" title="حذف الطالب" onclick="deleteRecord('student_records','${jsAttr(r.id)}','${jsAttr(r.studentName||'الطالب')}')">حذف</button>
+    </div>
+    <div class="st-kid-grid">
+      <label class="st-teach">المعلمة
+        <input id="stl_teacher_${escAttr(r.id)}" value="${escAttr(r.teacherName||'')}" placeholder="اكتبي حرفين للبحث" autocomplete="off" oninput="stTeacherTypeahead('${jsAttr(r.id)}', this.value)">
+        <div id="stl_tsug_${escAttr(r.id)}" class="st-sug" style="display:none"></div>
+      </label>
+      <label>المادة<input id="stl_subj_${escAttr(r.id)}" value="${escAttr(r.subject||'')}" placeholder="المادة"></label>
+      <label>الحصص<input id="stl_count_${escAttr(r.id)}" value="${escAttr(r.sessionCount||'')}" placeholder="8"></label>
+    </div>
+    <div class="st-subs">
+      <div class="st-subs-h">الاشتراكات (${subs.length})</div>
+      ${subHtml || `<div class="st-sub-empty">لا يوجد اشتراك بعد</div>`}
+      <button type="button" class="st-add-sub" onclick="addStLedgerSub('${jsAttr(r.id)}')">＋ إضافة اشتراك جديد</button>
+    </div>
+    <div class="st-kid-actions">
+      <button type="button" class="st-btn-save" onclick="saveStLedgerStudent('${jsAttr(r.id)}')">حفظ</button>
+    </div>
+  </article>`;
+}
+function stOwnerListHtml(groups){
+  if(!groups.length) return `<div class="empty">${ICON.empty}<div>لا يوجد طلاب بعد — أضيفي ولي أمر جديد أو استني إضافة المشرفات</div></div>`;
+  return `<div class="st-groups">${groups.map(g => {
+    const phone = g.phone || '';
+    const gName = stGuardianName(g);
+    const sampleId = g.students[0] && g.students[0].id;
+    const countLbl = g.students.length === 1 ? 'طالب واحد' : (g.students.length + ' طلاب');
+    return `<section class="st-group">
+      <header class="st-ghead">
+        <div class="st-gic">${g.students.length > 1 ? '👨‍👩‍👧' : '👤'}</div>
+        <div class="st-gid">
+          <input class="st-gname" id="st_gname_${escAttr(sampleId)}" value="${escAttr(gName)}" placeholder="اسم ولي الأمر" aria-label="اسم ولي الأمر" onchange="saveStGuardianName('${jsAttr(sampleId)}')">
+          <div class="st-gsub">${countLbl}</div>
+        </div>
+        ${phone ? `<button type="button" class="st-wa" title="واتساب ولي الأمر" onclick="waOpen('${jsAttr(phone)}','')">${ICON.wa}</button>` : ''}
+      </header>
+      ${g.students.map(stKidHtml).join('')}
+      <div class="st-gactions">
+        <button type="button" class="st-add-student" onclick="openStLinkStudentModal('${jsAttr(sampleId)}')">＋ إضافة طالب جديد</button>
+      </div>
+    </section>`;
+  }).join('')}</div>`;
+}
+function openStLinkStudentModal(sampleId){
+  if(!isOwner()) return;
+  const r0 = DATA.student_records.find(x => x.id === sampleId); if(!r0) return;
+  const gName = String(r0.parentName || '').trim() || 'ولي الأمر';
+  const phone = r0.studentPhone || '';
+  const box = document.getElementById('modalBody');
+  if(!box) return;
+  box.innerHTML = `
+    <h3>إضافة طالب جديد</h3>
+    <p class="pay-modal-note">اختاري طالب <b>مسجّل في بيانات الطلاب</b> لربطه بولي الأمر <b>${esc(gName)}</b>. الاسم والمعلمة والمادة والحصص هيجوا من سجله.</p>
+    <div class="field" style="position:relative">
+      <label>بحث بالاسم (حرفين)</label>
+      <input id="stl_link_q" placeholder="اكتبي حرفين من اسم الطالب" autocomplete="off" oninput="stLinkStudentSearch('${jsAttr(sampleId)}', this.value)">
+      <div id="stl_link_sug" class="st-sug" style="display:none"></div>
+    </div>
+    <button type="button" class="st-add-sub" style="width:100%;margin-top:8px" onclick="openStLedgerAddModal('${jsAttr(phone)}','${jsAttr(gName)}')">الطالب مش موجود؟ سجّليه جديد تحت ولي الأمر ده</button>
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeModal()">إغلاق</button>
+    </div>`;
+  openModal();
+}
+function stLinkStudentSearch(sampleId, q){
+  const box = document.getElementById('stl_link_sug');
+  if(!box) return;
+  q = String(q || '').trim();
+  if(q.length < 2){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  const r0 = DATA.student_records.find(x => x.id === sampleId);
+  const key = r0 ? stGuardianKey(r0) : '';
+  const inGroup = {};
+  (DATA.student_records || []).forEach(x => {
+    if(!x.archived && key && stGuardianKey(x) === key) inGroup[x.id] = 1;
+  });
+  const matches = (DATA.student_records || []).filter(r => !r.archived && !inGroup[r.id] && (r.studentName || '').includes(q));
+  if(!matches.length){
+    box.innerHTML = `<div class="st-sug-empty">لا يوجد طالب بهذا الاسم خارج الكرت</div>`;
+    box.style.display = 'block';
+    return;
+  }
+  box.innerHTML = matches.map(r => `<button type="button" class="st-sug-item" onclick="linkStudentToGuardian('${jsAttr(r.id)}','${jsAttr(sampleId)}')"><b>${esc(r.studentName)}</b><span class="st-link-meta">${esc(r.teacherName || 'بدون معلمة')} • ${esc(r.subject || 'بدون مادة')} • ${esc(r.sessionCount || '—')} حصص</span></button>`).join('');
+  box.style.display = 'block';
+}
+async function linkStudentToGuardian(studentId, sampleId){
+  if(!isOwner()) return;
+  const r0 = DATA.student_records.find(x => x.id === sampleId); if(!r0) return;
+  const r = DATA.student_records.find(x => x.id === studentId); if(!r) return;
+  const gName = String(r0.parentName || '').trim();
+  const phone = r0.studentPhone || '';
+  if(!window.confirm(`ربط الطالب "${r.studentName}" بولي الأمر "${gName || 'ده'}"؟`)) return;
+  const oldP = r.parentName, oldPh = r.studentPhone;
+  r.parentName = gName || r.parentName;
+  if(phone) r.studentPhone = phone;
+  const { error } = await sb.from('student_records').update({ student_phone: r.studentPhone || null }).eq('id', r.id);
+  if(error){
+    r.parentName = oldP; r.studentPhone = oldPh;
+    showToast('تعذر الربط: ' + dbErrorText(error)); return;
+  }
+  await persistParentName(r.id, r.parentName);
+  closeModal(); render(); showToast('تم ربط الطالب بولي الأمر');
+}
+async function removeStLedgerSub(id, subId){
+  if(!isOwner()) return;
+  const r = DATA.student_records.find(x => x.id === id); if(!r) return;
+  if(!window.confirm('حذف الاشتراك ده؟')) return;
+  r.ledgerSubs = readStLedgerSubsFromDom(id, r).filter(s => String(s.id) !== String(subId));
+  const subUp = await sb.from('student_records').update({ ledger_subs: r.ledgerSubs }).eq('id', id);
+  if(subUp && subUp.error){
+    showToast(/ledger_subs/i.test(String(subUp.error.message||'')+String(subUp.error.details||'')) ? '⚠️ نفّذي ملف SQL الإصدار 25 (عمود ledger_subs)' : ('تعذر حذف الاشتراك: ' + dbErrorText(subUp.error)));
+    return;
+  }
+  render();
+  showToast('تم حذف الاشتراك');
+}
+// === نهاية إضافات v27 ===
+
+
 
 
 
@@ -5378,5 +5536,5 @@ async function saveStLedgerNew(){
 
 
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a59529e26d608a1c',t:'MTc5NDQ4MjU5Ng=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a59529e26d608a1c',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
