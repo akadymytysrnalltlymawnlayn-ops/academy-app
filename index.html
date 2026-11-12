@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261108120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261109120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -455,6 +455,24 @@ html.has-session #authScreen{display:none;}
 .st-add-sub{display:block;width:100%;margin-top:6px;padding:8px;border:1px dashed #fdba74;border-radius:10px;background:#fff7ed;color:#c2410c;font-size:12px;font-weight:800;cursor:pointer;}
 .st-gactions{margin-top:4px;}
 .st-link-meta{display:block;font-size:11px;font-weight:600;color:var(--text-dim);margin-top:2px;}
+.st-minis{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.st-mini{border:1px solid #e2e8f0;border-right-width:4px;border-radius:14px;padding:8px;box-shadow:0 2px 8px rgba(15,23,42,.05);min-width:0;}
+.st-mini-name{width:100%;border:0;background:transparent;font-size:13px;font-weight:800;padding:0 0 4px;outline:none;font-family:inherit;}
+.st-mini-meta{font-size:10px;font-weight:700;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px;}
+.st-mini-open{width:100%;border:0;border-radius:9px;padding:7px;background:#0f172a;color:#fff;font-size:11px;font-weight:800;cursor:pointer;}
+.st-back{border:0;background:#f1f5f9;color:#334155;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:10px;}
+.st-detail{background:#fff;border:1px solid var(--line);border-right-width:4px;border-radius:16px;overflow:hidden;box-shadow:0 6px 18px rgba(15,23,42,.06);}
+.st-detail-h{display:flex;align-items:center;gap:8px;padding:10px;}
+.st-inline{margin:8px 0 12px;padding:10px;border:1px dashed #99f6e4;border-radius:12px;background:#f0fdfa;}
+.st-inline-h{font-size:12px;font-weight:800;color:#0f766e;margin-bottom:8px;}
+.st-inline label{display:flex;flex-direction:column;gap:3px;font-size:10px;font-weight:700;color:var(--text-dim);margin-bottom:6px;position:relative;}
+.st-inline input{width:100%;padding:7px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;}
+.st-inline-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.st-fam{margin:8px;padding:8px;border:1px dashed #99f6e4;border-radius:12px;background:#f8fffe;}
+.st-fam-h{font-size:11px;font-weight:800;color:#0f766e;margin-bottom:6px;}
+.st-sibs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.st-sib{border:0;background:#ccfbf1;color:#115e59;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer;}
+@media(max-width:420px){.st-minis{grid-template-columns:1fr;}}
 .st-subs{margin-top:6px;background:#fffbeb;border:1px dashed #fdba74;border-radius:10px;padding:6px 8px;}
 .pay-modal-note{font-size:12px;color:var(--text-dim);line-height:1.85;margin:0 0 12px;}
 .pay-card{border-radius:20px;}
@@ -1617,6 +1635,7 @@ function goTo(route){
     ROUTE = route; 
     if(route === 'schedule_sessions') scheduleDay = todayArIdx();
     if(route === 'student_records') srSupFilter = 'all'; // === تعديل: عند فتح بيانات الطلاب يبدأ العرض بـ "الإجمالي" (كل الطلاب) ===
+    if(route === 'students'){ stView = 'list'; stDetailId = ''; stInlineAdd = false; stInlineSib = false; }
     safeHistory(()=>history.pushState({route: ROUTE, modal:false}, '', location.pathname + location.search));
     render(); 
     window.scrollTo(0,0); 
@@ -1704,6 +1723,10 @@ function filterTrialSessions(){
 
 let studentFilter = 'الكل';
 let stLedgerQuery = '';
+let stView = 'list';
+let stDetailId = '';
+let stInlineAdd = false;
+let stInlineSib = false;
 function pageStudents(){
   return stOwnerPage();
 }
@@ -5524,6 +5547,225 @@ async function removeStLedgerSub(id, subId){
 }
 // === نهاية إضافات v27 ===
 
+// === إضافات v28: قائمة طلاب معزولة + صفحة تفاصيل مستقلة (بدون مودال إضافة) ===
+function stGoList(){
+  stView = 'list';
+  stDetailId = '';
+  stInlineSib = false;
+  render();
+}
+function stOpenDetail(id){
+  stView = 'detail';
+  stDetailId = id;
+  stInlineAdd = false;
+  stInlineSib = false;
+  render();
+  window.scrollTo(0, 0);
+}
+function stAccent(id){
+  const pal = [
+    ['#0f766e', '#f0fdfa', '#115e59'],
+    ['#1d4ed8', '#eff6ff', '#1e3a8a'],
+    ['#6d28d9', '#f5f3ff', '#4c1d95'],
+    ['#be185d', '#fdf2f8', '#9d174d'],
+    ['#b45309', '#fffbeb', '#92400e'],
+    ['#047857', '#ecfdf5', '#065f46']
+  ];
+  let h = 0;
+  String(id || '').split('').forEach(ch => { h = (h * 33 + ch.charCodeAt(0)) >>> 0; });
+  return pal[h % pal.length];
+}
+function stActiveRecords(){
+  const q = (stLedgerQuery || '').trim().toLowerCase();
+  const qDigits = toLatinDigits(q).replace(/\D/g, '');
+  return (DATA.student_records || []).filter(r => {
+    if(r.archived) return false;
+    if(!q) return true;
+    return (r.studentName || '').toLowerCase().includes(q) ||
+      (r.teacherName || '').toLowerCase().includes(q) ||
+      (r.subject || '').toLowerCase().includes(q) ||
+      (r.parentName || '').toLowerCase().includes(q) ||
+      (qDigits.length >= 3 && toLatinDigits(r.studentPhone || '').replace(/\D/g, '').includes(qDigits));
+  }).sort((a,b)=> String(a.studentName||'').localeCompare(String(b.studentName||''), 'ar'));
+}
+function stLegacyBlock(){
+  const list = DATA.students.filter(s=> studentFilter==='الكل' ? !s.archived : (studentFilter==='مؤرشف'? s.archived : (!s.archived && s.status===studentFilter)));
+  const filters = ['الكل','تجريبي','مشترك','متوقف','مؤرشف'];
+  return `
+    <details class="st-legacy">
+      <summary>سجلات النظام القديم (${list.length})</summary>
+      <div style="display:flex;gap:6px;margin:10px 0;flex-wrap:wrap;">
+        ${filters.map(f=>`<button style="padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:${studentFilter===f?'var(--ink)':'#fff'};color:${studentFilter===f?'#fff':'var(--text-dim)'};font-size:11px;" onclick="studentFilter='${f}';render()">${f}</button>`).join('')}
+      </div>
+      <div class="list">
+        ${list.length? list.map(s=>studentCard(s)).join('') : `<div class="empty">${ICON.empty}<div>لا يوجد طلاب</div></div>`}
+      </div>
+    </details>`;
+}
+function stMiniCard(r){
+  const col = stAccent(r.id);
+  return `<article class="st-mini" style="border-color:${col[0]};background:${col[1]}">
+    <input class="st-mini-name" style="color:${col[2]}" id="stl_name_${escAttr(r.id)}" value="${escAttr(r.studentName||'')}" placeholder="اسم الطالب" onchange="saveStListName('${jsAttr(r.id)}')">
+    <div class="st-mini-meta">${esc(r.teacherName || 'بدون معلمة')} · ${esc(r.subject || 'بدون مادة')}</div>
+    <button type="button" class="st-mini-open" onclick="stOpenDetail('${jsAttr(r.id)}')">عرض التفاصيل</button>
+  </article>`;
+}
+function stInlineAddForm(prefix, title){
+  return `<div class="st-inline">
+    <div class="st-inline-h">${esc(title)}</div>
+    <label>اسم الطالب<input id="${prefix}_name" placeholder="اسم الطالب"></label>
+    <label class="st-teach">المعلمة
+      <input id="stl_teacher_${escAttr(prefix)}" placeholder="اكتبي حرفين للبحث" autocomplete="off" oninput="stTeacherTypeahead('${jsAttr(prefix)}', this.value)">
+      <div id="stl_tsug_${escAttr(prefix)}" class="st-sug" style="display:none"></div>
+    </label>
+    <div class="st-inline-row">
+      <label>المادة<input id="${prefix}_subj" placeholder="المادة"></label>
+      <label>الحصص<input id="${prefix}_count" placeholder="8"></label>
+    </div>
+    <div class="st-kid-actions">
+      <button type="button" class="st-btn-save" onclick="saveStInlineStudent('${jsAttr(prefix)}')">حفظ الطالب</button>
+      <button type="button" class="st-btn-ghost" onclick="stInlineAdd=false;stInlineSib=false;render()">إلغاء</button>
+    </div>
+  </div>`;
+}
+function stListPage(){
+  const recs = stActiveRecords();
+  return `
+    <div class="st-hero">
+      <div>
+        <h1 class="page-title">الطلاب</h1>
+        <p class="st-hero-sub">كل طالب في كارت مستقل — الأسماء من بيانات الطلاب</p>
+      </div>
+      <span class="st-hero-count">${recs.length} طالب</span>
+    </div>
+    <button type="button" class="st-add-main" onclick="stInlineAdd=!stInlineAdd;stInlineSib=false;render()">➕ إضافة طالب جديد</button>
+    ${stInlineAdd ? stInlineAddForm('stnew', 'طالب جديد') : ''}
+    <div class="sr-toolbar">
+      <input class="sr-search" id="stLedgerSearch" placeholder="🔍 اسم الطالب..." value="${esc(stLedgerQuery)}" oninput="stLedgerQuery=this.value; render();">
+    </div>
+    <div id="stLedgerWrap" class="st-minis">${recs.length ? recs.map(stMiniCard).join('') : `<div class="empty">${ICON.empty}<div>لا يوجد طلاب</div></div>`}</div>
+  `;
+}
+function stOwnerPage(){
+  if(!isOwner()) return '';
+  if(stView === 'detail'){
+    const r = (DATA.student_records || []).find(x => x.id === stDetailId && !x.archived);
+    if(r) return stDetailPage(r) + stLegacyBlock();
+    stView = 'list'; stDetailId = '';
+  }
+  return stListPage() + stLegacyBlock();
+}
+function stSiblingsOf(r){
+  const key = stGuardianKey(r);
+  if(!key || key.indexOf('i:') === 0) return [];
+  return (DATA.student_records || []).filter(x => !x.archived && x.id !== r.id && stGuardianKey(x) === key);
+}
+function stDetailPage(r){
+  const col = stAccent(r.id);
+  const subs = stLedgerSubsOf(r);
+  const ordinal = ['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن'];
+  const sibs = stSiblingsOf(r);
+  const subHtml = subs.map((sub, idx) => `
+    <div class="st-sub">
+      <div class="st-sub-top">
+        <span class="st-badge-sub">اشتراك</span>
+        <span class="st-sub-h">الاشتراك ${ordinal[idx] || (idx+1)}</span>
+        <button type="button" class="st-sub-del" onclick="removeStLedgerSub('${jsAttr(r.id)}','${jsAttr(sub.id)}')">حذف</button>
+      </div>
+      <div class="st-sub-grid">
+        <label>البداية<input type="date" id="stl_start_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.startDate)}"></label>
+        <label>حالة الدفع<input type="text" id="stl_pstat_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.payStatus)}" placeholder="تم الدفع / معلق"></label>
+        <label>تاريخ الدفع<input type="date" id="stl_pdate_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.payDate)}"></label>
+      </div>
+      <label class="st-notes">ملاحظات<input type="text" id="stl_notes_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.notes)}" placeholder="اختياري"></label>
+    </div>`).join('');
+  return `
+    <button type="button" class="st-back" onclick="stGoList()">→ رجوع للقائمة</button>
+    <section class="st-detail" style="border-color:${col[0]}">
+      <div class="st-detail-h" style="background:${col[1]}">
+        <span class="st-badge-kid">طالب</span>
+        <h2 class="st-kid-title">${esc(r.studentName) || '—'}</h2>
+        ${r.studentPhone ? `<button type="button" class="st-wa" title="واتساب" onclick="waOpen('${jsAttr(r.studentPhone)}','')">${ICON.wa}</button>` : ''}
+      </div>
+      <input type="hidden" id="stl_name_${escAttr(r.id)}" value="${escAttr(r.studentName||'')}">
+      <div class="st-kid-grid" style="padding:8px">
+        <label class="st-teach">المعلمة
+          <input id="stl_teacher_${escAttr(r.id)}" value="${escAttr(r.teacherName||'')}" placeholder="اكتبي حرفين للبحث" autocomplete="off" oninput="stTeacherTypeahead('${jsAttr(r.id)}', this.value)">
+          <div id="stl_tsug_${escAttr(r.id)}" class="st-sug" style="display:none"></div>
+        </label>
+        <label>المادة<input id="stl_subj_${escAttr(r.id)}" value="${escAttr(r.subject||'')}" placeholder="المادة"></label>
+        <label>الحصص<input id="stl_count_${escAttr(r.id)}" value="${escAttr(r.sessionCount||'')}" placeholder="8"></label>
+      </div>
+      <div class="st-kid-actions" style="padding:0 8px 8px">
+        <button type="button" class="st-btn-save" onclick="saveStLedgerStudent('${jsAttr(r.id)}')">حفظ البيانات</button>
+        <button type="button" class="st-del" onclick="deleteStDetail('${jsAttr(r.id)}','${jsAttr(r.studentName||'الطالب')}')">حذف الطالب</button>
+      </div>
+      <div class="st-subs">
+        <div class="st-subs-h">الاشتراكات</div>
+        ${subHtml || `<div class="st-sub-empty">لا يوجد اشتراك بعد</div>`}
+        <button type="button" class="st-add-sub" onclick="addStLedgerSub('${jsAttr(r.id)}')">＋ إضافة اشتراك جديد</button>
+      </div>
+      <div class="st-fam">
+        <div class="st-fam-h">أخ / قريب لنفس الأسرة</div>
+        ${sibs.length ? `<div class="st-sibs">${sibs.map(s => `<button type="button" class="st-sib" onclick="stOpenDetail('${jsAttr(s.id)}')">${esc(s.studentName)}</button>`).join('')}</div>` : `<div class="st-sub-empty">لا يوجد إخوة مسجّلين</div>`}
+        <button type="button" class="st-add-student" onclick="stInlineSib=!stInlineSib;render()">＋ إضافة طالب جديد / أخ / قريب</button>
+        ${stInlineSib ? stInlineAddForm('stsib', 'طالب جديد لنفس الأسرة') : ''}
+      </div>
+    </section>
+  `;
+}
+async function saveStListName(id){
+  if(!isOwner()) return;
+  const r = DATA.student_records.find(x => x.id === id); if(!r) return;
+  const name = stVal('stl_name_' + id);
+  if(!name) return;
+  const old = r.studentName;
+  r.studentName = name;
+  const { error } = await sb.from('student_records').update({ student_name: name }).eq('id', id);
+  if(error){ r.studentName = old; showToast('تعذر حفظ الاسم: ' + dbErrorText(error)); return; }
+  showToast('تم حفظ الاسم');
+}
+async function saveStInlineStudent(prefix){
+  if(!isOwner()) return;
+  const studentName = stVal(prefix + '_name');
+  if(!studentName){ showToast('اكتبي اسم الطالب'); return; }
+  const teacherName = stVal('stl_teacher_' + prefix);
+  const subject = stVal(prefix + '_subj');
+  const sessionCount = stVal(prefix + '_count');
+  let parentName = '';
+  let phone = '';
+  if(prefix === 'stsib' && stDetailId){
+    const cur = DATA.student_records.find(x => x.id === stDetailId);
+    if(cur){ parentName = cur.parentName || ''; phone = cur.studentPhone || ''; }
+  }
+  const currentUid = await getCurrentUserId();
+  const rec = {
+    id: uid(),
+    supervisorId: currentUid || '',
+    studentName, studentPhone: phone, parentName, teacherName, teacherPhone: '',
+    subject, sessionCount, studentPrice: '', teacherPrice: '',
+    serviceType: '', subscriptionCycle: '', sessionDuration: '',
+    studentPaymentStatus: 'معلق', studentPaymentDate: '',
+    teacherTransferStatus: '', teacherTransferDate: '',
+    slots: [], groupLink: '', cycleAnchor: '', sessionUsedOffset: 0,
+    paymentDueDate: '', ledgerSubs: [], archived: false
+  };
+  const { error } = await sb.from('student_records').insert(studentRecordToDb(rec));
+  if(error){ showToast('تعذر الحفظ: ' + dbErrorText(error)); return; }
+  if(parentName) await persistParentName(rec.id, parentName);
+  DATA.student_records.unshift(rec);
+  stInlineAdd = false;
+  stInlineSib = false;
+  stOpenDetail(rec.id);
+  showToast('تم إضافة الطالب');
+}
+async function deleteStDetail(id, name){
+  await deleteRecord('student_records', id, name);
+  if(!(DATA.student_records || []).some(x => x.id === id && !x.archived)) stGoList();
+}
+// === نهاية إضافات v28 ===
+
+
 
 
 
@@ -5536,5 +5778,5 @@ async function removeStLedgerSub(id, subId){
 
 
 </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5957eddff96121e',t:'MTc5NDQ4NjA3Nw=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5957eddff96121e',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
