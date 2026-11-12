@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261106120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261107120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -403,34 +403,45 @@ html.has-session #authScreen{display:none;}
 .pay-seg span.on.paid{background:#22c55e;color:#fff;box-shadow:0 2px 6px rgba(34,197,94,.35);}
 .pay-seg span.on.hold{background:#f59e0b;color:#fff;box-shadow:0 2px 6px rgba(245,158,11,.35);}
 .pay-seg span.on.unpaid{background:#ef4444;color:#fff;box-shadow:0 2px 6px rgba(239,68,68,.3);}
-.st-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;}
-.st-hero-sub{margin:4px 0 0;font-size:12px;color:var(--text-dim);line-height:1.7;}
-.st-hero-count{flex:none;font-size:11px;font-weight:800;color:var(--text-dim);background:#f8fafc;padding:4px 10px;border-radius:10px;}
-.st-add-main{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px;border:none;border-radius:18px;background:linear-gradient(135deg,#14b8a6,#0d9488);color:#fff;font-size:16px;font-weight:800;box-shadow:0 4px 14px rgba(13,148,136,.35);cursor:pointer;margin-bottom:14px;}
-.st-groups{display:grid;grid-template-columns:1fr;gap:14px;}
-@media(min-width:860px){.st-groups{grid-template-columns:repeat(2,1fr);}}
-.st-group{background:#fff;border:1px solid var(--line);border-right:5px solid #14b8a6;border-radius:20px;padding:12px;box-shadow:0 2px 10px rgba(15,23,42,.05);}
-.st-ghead{display:flex;align-items:center;gap:10px;padding-bottom:10px;margin-bottom:8px;border-bottom:1px dashed var(--line);}
-.st-gic{width:38px;height:38px;flex:none;border-radius:12px;background:#ccfbf1;display:flex;align-items:center;justify-content:center;font-size:19px;}
+.st-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;}
+.st-hero-sub{margin:3px 0 0;font-size:11px;color:var(--text-dim);line-height:1.6;}
+.st-hero-count{flex:none;font-size:10px;font-weight:800;color:#0f766e;background:#f0fdfa;padding:3px 8px;border-radius:999px;}
+.st-add-main{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:12px;border:none;border-radius:14px;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;font-size:14px;font-weight:800;box-shadow:0 3px 10px rgba(13,148,136,.28);cursor:pointer;margin-bottom:10px;}
+.st-groups{display:flex;flex-direction:column;gap:12px;}
+.st-group{background:#fff;border:1px solid #cbfbf1;border-right:4px solid #0d9488;border-radius:16px;padding:8px;box-shadow:0 4px 14px rgba(15,118,110,.08);}
+.st-ghead{display:flex;align-items:center;gap:8px;padding:6px 6px 8px;margin-bottom:6px;border-bottom:1px solid #e6fffa;background:linear-gradient(180deg,#f0fdfa,#fff);}
+.st-gic{width:30px;height:30px;flex:none;border-radius:10px;background:#ccfbf1;display:flex;align-items:center;justify-content:center;font-size:15px;}
 .st-gid{flex:1;min-width:0;}
-.st-phone{font-family:'Cairo',sans-serif;font-weight:800;font-size:15px;color:var(--ink);direction:ltr;text-align:right;letter-spacing:.2px;}
-.st-phone.none{font-family:inherit;font-size:12.5px;color:var(--text-dim);direction:rtl;}
-.st-gsub{font-size:11px;color:var(--text-dim);margin-top:1px;}
-.st-kid{border:1px solid var(--line);border-radius:16px;padding:10px;margin-top:8px;background:#f8fffe;}
-.st-kid-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.st-kid-grid label,.st-sub-grid label,.st-notes{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;color:var(--text-dim);}
-.st-kid-grid input,.st-kid-grid select,.st-sub-grid input,.st-notes input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-weight:600;color:var(--ink);background:#fff;}
-.st-sub{margin-top:10px;padding:10px;border-radius:14px;background:#fff;border:1px dashed #99f6e4;}
-.st-sub-h{font-size:12px;font-weight:800;color:#0f766e;margin-bottom:8px;}
-.st-sub-grid{display:grid;grid-template-columns:1fr;gap:8px;}
-@media(min-width:640px){.st-sub-grid{grid-template-columns:1fr 1fr 1fr;}}
-.st-notes{margin-top:8px;}
-.st-kid-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
-.st-btn-save{border:none;background:var(--ink);color:#fff;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;}
-.st-btn-ghost,.st-add-sib{border:1px dashed #99f6e4;background:#f0fdfa;color:#0f766e;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;}
-.st-add-sib{display:block;width:100%;margin-top:10px;}
-.st-legacy{margin-top:18px;}
+.st-gname{width:100%;border:0;background:transparent;font-weight:800;font-size:14px;color:#134e4a;padding:0;outline:none;font-family:inherit;}
+.st-gname::placeholder{color:#94a3b8;font-weight:700;}
+.st-gsub{font-size:10px;color:#0f766e;font-weight:700;margin-top:1px;}
+.st-wa{width:32px;height:32px;flex:none;border:0;border-radius:10px;background:#dcfce7;color:#15803d;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.st-kid{border:1px solid #e2e8f0;border-radius:12px;padding:8px;margin-top:6px;background:#fff;}
+.st-kid-top{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.st-kid-name{flex:1;min-width:0;border:1px solid #e2e8f0;border-radius:8px;padding:6px 8px;font-size:13px;font-weight:800;color:var(--ink);background:#f8fafc;}
+.st-del{flex:none;border:0;background:#fef2f2;color:#b91c1c;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:800;cursor:pointer;}
+.st-kid-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.st-kid-grid label,.st-sub-grid label,.st-notes{display:flex;flex-direction:column;gap:3px;font-size:10px;font-weight:700;color:var(--text-dim);position:relative;}
+.st-kid-grid input,.st-sub-grid input,.st-notes input{width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;color:var(--ink);background:#fff;}
+.st-teach{grid-column:1 / -1;}
+.st-sug{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:8px;max-height:140px;overflow-y:auto;z-index:30;box-shadow:0 8px 20px rgba(15,23,42,.12);}
+.st-sug-item{display:block;width:100%;text-align:right;border:0;background:#fff;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;border-bottom:1px solid #f1f5f9;}
+.st-sug-item:hover{background:#f0fdfa;}
+.st-sug-empty{padding:8px;font-size:12px;color:var(--text-faint);}
+.st-subs{margin-top:6px;background:#f8fffe;border:1px dashed #99f6e4;border-radius:10px;padding:4px 8px;}
+.st-subs summary{cursor:pointer;font-size:11px;font-weight:800;color:#0f766e;padding:4px 0;}
+.st-sub{margin-top:6px;padding:6px;border-radius:8px;background:#fff;border:1px solid #e6fffa;}
+.st-sub-h{font-size:11px;font-weight:800;color:#0f766e;margin-bottom:6px;}
+.st-sub-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.st-notes{margin-top:6px;grid-column:1 / -1;}
+.st-kid-actions{display:flex;gap:6px;margin-top:8px;}
+.st-btn-save{border:none;background:var(--ink);color:#fff;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:800;cursor:pointer;}
+.st-btn-ghost,.st-add-sib{border:1px dashed #5eead4;background:#f0fdfa;color:#0f766e;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:800;cursor:pointer;}
+.st-btn-sm{margin:6px 0;width:100%;}
+.st-add-sib{display:block;width:100%;margin-top:8px;padding:9px;border-radius:10px;background:#ecfeff;border:1px dashed #67e8f9;color:#0e7490;}
+.st-legacy{margin-top:16px;}
 .st-legacy summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--text-dim);padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:12px;}
+@media(min-width:720px){.st-groups{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}.st-sub-grid{grid-template-columns:1fr 1fr 1fr;}}
 .pay-modal-note{font-size:12px;color:var(--text-dim);line-height:1.85;margin:0 0 12px;}
 .pay-card{border-radius:20px;}
 .pay-row{border-radius:16px;}
@@ -1242,6 +1253,7 @@ function mapStudentRecord(r){
     sessionUsedOffset: parseInt(r.session_used_offset, 10) || 0, // === v23: فرق التعديل اليدوي عن عدّاد الحضور ===
     paymentDueDate: String(r.payment_due_date || '').slice(0, 10), // === v24: موعد الدفع (تاريخ فقط) ===
     ledgerSubs: mapLedgerSubs(r.ledger_subs), // === v25: اشتراكات كشف المالك ===
+    parentName: String(r.parent_name || '').trim(), // === v26: اسم ولي الأمر ===
     archived:!!r.archived
   };
 }
@@ -2153,6 +2165,7 @@ function openStudentRecordModal(id){
       <div class="field"><label>اسم الطالب</label><input id="f_srStudentName" value="${esc(v.studentName)}" placeholder="اسم الطالب"></div>
       <div class="field"><label>رقم الهاتف</label><input id="f_srPhone" value="${esc(v.studentPhone)}" placeholder="201001234567"></div>
     </div>
+    <div class="field"><label>اسم ولي الأمر</label><input id="f_srParentName" value="${esc(v.parentName||'')}" placeholder="اسم ولي الأمر"></div>
     <div class="row2">
       <div class="field" style="position:relative;">
         <label>اسم المعلمة</label>
@@ -2255,6 +2268,7 @@ async function saveStudentRecordCore(id){
     supervisorId: base.supervisorId || currentUid || '', // === تعديل: الطالب الجديد يُسجَّل باسم من أضافه، والقديم يحتفظ بصاحبه ===
     studentName: document.getElementById('f_srStudentName').value.trim(),
     studentPhone: cleanPhone(document.getElementById('f_srPhone').value), // === تعديل: تنظيف الرقم ===
+    parentName: (document.getElementById('f_srParentName') ? document.getElementById('f_srParentName').value.trim() : (base.parentName || '')),
     teacherName: document.getElementById('f_srTeacherName').value.trim(),
     teacherPhone: cleanPhone(document.getElementById('f_srTeacherPhone').value), // === تعديل: تنظيف الرقم ===
     subject: document.getElementById('f_srSubject').value.trim(),
@@ -2286,6 +2300,12 @@ async function saveStudentRecordCore(id){
     const { error } = await sb.from('student_records').insert(studentRecordToDb(rec));
     if(error){ console.error('student_records insert:', error); showToast('تعذر الحفظ: ' + dbErrorText(error)); return; } // === تعديل: تسجيل سبب الخطأ ===
     DATA.student_records.unshift(rec);
+  }
+  if(rec.parentName != null){
+    const pUp = await sb.from('student_records').update({ parent_name: rec.parentName || null }).eq('id', rec.id);
+    if(pUp && pUp.error && !/parent_name/i.test(String(pUp.error.message||'')+String(pUp.error.details||'')+String(pUp.error.hint||'')+String(pUp.error.code||''))){
+      showToast('تعذر حفظ اسم ولي الأمر: ' + dbErrorText(pUp.error));
+    }
   }
   closeModal(); render(); showToast(id?'تم الحفظ':'✅ تم إضافة المشترك بنجاح');
 }
@@ -5110,6 +5130,244 @@ async function addStLedgerSub(id){
 }
 // === نهاية إضافات v25 ===
 
+// === إضافات v26: اسم ولي الأمر + بحث المعلمة + كروت مدمجة + حذف طالب ===
+function stGuardianKey(r){
+  const pk = payPhoneKey(r && r.studentPhone);
+  if(pk) return 'p:' + pk;
+  const nm = String((r && r.parentName) || '').trim();
+  if(nm) return 'n:' + nm;
+  return 'i:' + ((r && r.id) || '');
+}
+function stGuardianName(g){
+  const named = (g.students || []).map(s => String(s.parentName || '').trim()).find(Boolean);
+  if(named) return named;
+  return String(g.parentName || '').trim();
+}
+function stOwnerGroups(){
+  const q = (stLedgerQuery || '').trim().toLowerCase();
+  const qDigits = toLatinDigits(q).replace(/\D/g, '');
+  const groups = new Map();
+  (DATA.student_records || []).forEach(r => {
+    if(r.archived) return;
+    if(q){
+      const hit = (r.studentName||'').toLowerCase().includes(q) ||
+        (r.teacherName||'').toLowerCase().includes(q) ||
+        (r.subject||'').toLowerCase().includes(q) ||
+        (r.parentName||'').toLowerCase().includes(q) ||
+        (qDigits.length >= 3 && toLatinDigits(r.studentPhone||'').replace(/\D/g,'').includes(qDigits));
+      if(!hit) return;
+    }
+    const key = stGuardianKey(r);
+    let g = groups.get(key);
+    if(!g){ g = { key, phone: r.studentPhone || '', parentName: String(r.parentName || '').trim(), students: [] }; groups.set(key, g); }
+    if(!g.phone && r.studentPhone) g.phone = r.studentPhone;
+    if(!g.parentName && r.parentName) g.parentName = String(r.parentName).trim();
+    g.students.push(r);
+  });
+  return Array.from(groups.values()).sort((a,b)=> String(stGuardianName(a) || a.phone || '').localeCompare(String(stGuardianName(b) || b.phone || ''), 'ar'));
+}
+function stTeacherTypeahead(rid, q){
+  const box = document.getElementById('stl_tsug_' + rid);
+  if(!box) return;
+  q = String(q || '').trim();
+  if(q.length < 2){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  const matches = (DATA.teachers || []).filter(t => !t.archived && t.name && t.name.includes(q));
+  if(!matches.length){
+    box.innerHTML = `<div class="st-sug-empty">لا يوجد نتائج</div>`;
+    box.style.display = 'block';
+    return;
+  }
+  box.innerHTML = matches.map(t => `<button type="button" class="st-sug-item" onclick="pickStTeacher('${jsAttr(rid)}','${jsAttr(t.name)}')">${esc(t.name)}</button>`).join('');
+  box.style.display = 'block';
+}
+function pickStTeacher(rid, name){
+  const inp = document.getElementById('stl_teacher_' + rid);
+  if(inp) inp.value = name;
+  const box = document.getElementById('stl_tsug_' + rid);
+  if(box){ box.style.display = 'none'; box.innerHTML = ''; }
+}
+function stKidHtml(r){
+  const subs = stLedgerSubsOf(r);
+  const ordinal = ['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن'];
+  const subHtml = subs.map((sub, idx) => `
+    <div class="st-sub">
+      <div class="st-sub-h">الاشتراك ${ordinal[idx] || (idx+1)}</div>
+      <div class="st-sub-grid">
+        <label>البداية<input type="date" id="stl_start_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.startDate)}"></label>
+        <label>حالة الدفع<input type="text" id="stl_pstat_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.payStatus)}" placeholder="تم الدفع / معلق / نصف..."></label>
+        <label>تاريخ الدفع<input type="date" id="stl_pdate_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.payDate)}"></label>
+      </div>
+      <label class="st-notes">ملاحظات<input type="text" id="stl_notes_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.notes)}" placeholder="اختياري"></label>
+    </div>`).join('');
+  return `<article class="st-kid">
+    <div class="st-kid-top">
+      <input class="st-kid-name" id="stl_name_${escAttr(r.id)}" value="${escAttr(r.studentName||'')}" placeholder="اسم الطالب">
+      <button type="button" class="st-del" title="حذف الطالب" onclick="deleteRecord('student_records','${jsAttr(r.id)}','${jsAttr(r.studentName||'الطالب')}')">حذف</button>
+    </div>
+    <div class="st-kid-grid">
+      <label class="st-teach">المعلمة
+        <input id="stl_teacher_${escAttr(r.id)}" value="${escAttr(r.teacherName||'')}" placeholder="اكتبي حرفين للبحث" autocomplete="off" oninput="stTeacherTypeahead('${jsAttr(r.id)}', this.value)">
+        <div id="stl_tsug_${escAttr(r.id)}" class="st-sug" style="display:none"></div>
+      </label>
+      <label>المادة<input id="stl_subj_${escAttr(r.id)}" value="${escAttr(r.subject||'')}" placeholder="المادة"></label>
+      <label>الحصص<input id="stl_count_${escAttr(r.id)}" value="${escAttr(r.sessionCount||'')}" placeholder="8"></label>
+    </div>
+    <details class="st-subs" ${subs.length > 1 ? 'open' : ''}>
+      <summary>الاشتراكات (${subs.length})</summary>
+      ${subHtml}
+      <button type="button" class="st-btn-ghost st-btn-sm" onclick="addStLedgerSub('${jsAttr(r.id)}')">＋ إضافة اشتراك</button>
+    </details>
+    <div class="st-kid-actions">
+      <button type="button" class="st-btn-save" onclick="saveStLedgerStudent('${jsAttr(r.id)}')">حفظ</button>
+    </div>
+  </article>`;
+}
+function stOwnerListHtml(groups){
+  if(!groups.length) return `<div class="empty">${ICON.empty}<div>لا يوجد طلاب بعد — أضيفي ولي أمر جديد أو استني إضافة المشرفات</div></div>`;
+  return `<div class="st-groups">${groups.map(g => {
+    const phone = g.phone || '';
+    const gName = stGuardianName(g);
+    const sampleId = g.students[0] && g.students[0].id;
+    const countLbl = g.students.length === 1 ? 'طالب واحد' : (g.students.length + ' طلاب');
+    return `<section class="st-group">
+      <header class="st-ghead">
+        <div class="st-gic">${g.students.length > 1 ? '👨‍👩‍👧' : '👤'}</div>
+        <div class="st-gid">
+          <input class="st-gname" id="st_gname_${escAttr(sampleId)}" value="${escAttr(gName)}" placeholder="اسم ولي الأمر" aria-label="اسم ولي الأمر" onchange="saveStGuardianName('${jsAttr(sampleId)}')">
+          <div class="st-gsub">${countLbl}</div>
+        </div>
+        ${phone ? `<button type="button" class="st-wa" title="واتساب ولي الأمر" onclick="waOpen('${jsAttr(phone)}','')">${ICON.wa}</button>` : ''}
+      </header>
+      ${g.students.map(stKidHtml).join('')}
+      <button type="button" class="st-add-sib" onclick="openStLedgerAddModal('${jsAttr(phone)}','${jsAttr(gName)}')">＋ إضافة طالب لنفس ولي الأمر</button>
+    </section>`;
+  }).join('')}</div>`;
+}
+function stOwnerPage(){
+  if(!isOwner()) return '';
+  const groups = stOwnerGroups();
+  const nKids = groups.reduce((n,g)=> n + g.students.length, 0);
+  const list = DATA.students.filter(s=> studentFilter==='الكل' ? !s.archived : (studentFilter==='مؤرشف'? s.archived : (!s.archived && s.status===studentFilter)));
+  const filters = ['الكل','تجريبي','مشترك','متوقف','مؤرشف'];
+  const legacy = `
+    <details class="st-legacy">
+      <summary>سجلات النظام القديم (${list.length})</summary>
+      <div style="display:flex;gap:6px;margin:10px 0;flex-wrap:wrap;">
+        ${filters.map(f=>`<button style="padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:${studentFilter===f?'var(--ink)':'#fff'};color:${studentFilter===f?'#fff':'var(--text-dim)'};font-size:11px;" onclick="studentFilter='${f}';render()">${f}</button>`).join('')}
+      </div>
+      <div class="list">
+        ${list.length? list.map(s=>studentCard(s)).join('') : `<div class="empty">${ICON.empty}<div>لا يوجد طلاب</div></div>`}
+      </div>
+    </details>`;
+  return `
+    <div class="st-hero">
+      <div>
+        <h1 class="page-title">الطلاب</h1>
+        <p class="st-hero-sub">كروت أولياء الأمور — أي إضافة من بيانات الطلاب تظهر هنا فورًا</p>
+      </div>
+      <span class="st-hero-count">${nKids} طالب • ${groups.length} ولي أمر</span>
+    </div>
+    <button type="button" class="st-add-main" onclick="openStLedgerAddModal('','')">➕ إضافة ولي أمر / طالب جديد</button>
+    <div class="sr-toolbar">
+      <input class="sr-search" id="stLedgerSearch" placeholder="🔍 اسم ولي الأمر أو الطالب..." value="${esc(stLedgerQuery)}" oninput="stLedgerQuery=this.value; renderStLedgerList();">
+    </div>
+    <div id="stLedgerWrap">${stOwnerListHtml(groups)}</div>
+    ${legacy}
+  `;
+}
+function openStLedgerAddModal(phone, parentName){
+  if(!isOwner()) return;
+  const box = document.getElementById('modalBody');
+  if(!box) return;
+  const isSib = !!(phone || parentName);
+  box.innerHTML = `
+    <h3>${isSib ? 'إضافة طالب لنفس ولي الأمر' : 'إضافة ولي أمر / طالب جديد'}</h3>
+    <p class="pay-modal-note">${isSib ? 'الطالب الجديد هيتضاف تحت نفس ولي الأمر.' : 'هيتسجل ولي أمر جديد مع أول طالب. كل الحقول اختيارية ماعدا اسم الطالب.'}</p>
+    <div class="field"><label>اسم ولي الأمر</label><input id="stl_new_parent" value="${escAttr(parentName||'')}" placeholder="اسم ولي الأمر"></div>
+    <div class="field"><label>رقم واتساب ولي الأمر</label><input id="stl_new_phone" value="${escAttr(phone||'')}" placeholder="01xxxxxxxxx"></div>
+    <div class="field"><label>اسم الطالب</label><input id="stl_new_name" placeholder="اسم الطالب"></div>
+    <div class="field" style="position:relative"><label>المعلمة</label>
+      <input id="stl_new_teacher" placeholder="اكتبي حرفين للبحث" autocomplete="off" oninput="stTeacherTypeahead('new', this.value)">
+      <div id="stl_tsug_new" class="st-sug" style="display:none"></div>
+    </div>
+    <div class="field"><label>المادة</label><input id="stl_new_subj" placeholder="اختياري"></div>
+    <div class="field"><label>عدد الحصص</label><input id="stl_new_count" placeholder="اختياري"></div>
+    <div class="field"><label>بداية الاشتراك</label><input id="stl_new_start" type="date"></div>
+    <div class="field"><label>حالة الدفع</label><input id="stl_new_pstat" placeholder="معلق / تم الدفع 100 / ..."></div>
+    <div class="field"><label>تاريخ الدفع</label><input id="stl_new_pdate" type="date"></div>
+    <div class="field"><label>ملاحظات</label><input id="stl_new_notes" placeholder="اختياري"></div>
+    <div class="modal-actions">
+      <button class="save" onclick="saveStLedgerNew()">حفظ</button>
+      <button class="cancel" onclick="closeModal()">إلغاء</button>
+    </div>`;
+  openModal();
+}
+async function persistParentName(id, name){
+  const val = String(name || '').trim();
+  const { error } = await sb.from('student_records').update({ parent_name: val || null }).eq('id', id);
+  if(error && /parent_name/i.test(String(error.message||'')+String(error.details||'')+String(error.hint||'')+String(error.code||''))){
+    return 'missing';
+  }
+  return error || null;
+}
+async function saveStGuardianName(sampleId){
+  if(!isOwner()) return;
+  const r0 = DATA.student_records.find(x => x.id === sampleId); if(!r0) return;
+  const inp = document.getElementById('st_gname_' + sampleId);
+  const name = inp ? String(inp.value || '').trim() : '';
+  const key = stGuardianKey(r0);
+  const peers = DATA.student_records.filter(x => !x.archived && stGuardianKey(x) === key);
+  let missing = false;
+  for(let i = 0; i < peers.length; i++){
+    peers[i].parentName = name;
+    const err = await persistParentName(peers[i].id, name);
+    if(err === 'missing') missing = true;
+    else if(err){ showToast('تعذر حفظ اسم ولي الأمر: ' + dbErrorText(err)); return; }
+  }
+  if(missing) showToast('⚠️ نفّذي ملف SQL الإصدار 26 في Supabase (عمود parent_name)');
+  else showToast('تم حفظ اسم ولي الأمر');
+}
+async function saveStLedgerNew(){
+  if(!isOwner()) return;
+  const studentName = stVal('stl_new_name');
+  if(!studentName){ showToast('اكتبي اسم الطالب'); return; }
+  const parentName = stVal('stl_new_parent');
+  const phone = (typeof cleanPhone === 'function') ? cleanPhone(stVal('stl_new_phone')) : stVal('stl_new_phone');
+  const teacherName = stVal('stl_new_teacher');
+  const subject = stVal('stl_new_subj');
+  const sessionCount = stVal('stl_new_count');
+  const startDate = stVal('stl_new_start');
+  const payStatus = stVal('stl_new_pstat');
+  const payDate = stVal('stl_new_pdate');
+  const notes = stVal('stl_new_notes');
+  const currentUid = await getCurrentUserId();
+  const rec = {
+    id: uid(),
+    supervisorId: currentUid || '',
+    studentName, studentPhone: phone, parentName, teacherName, teacherPhone: '',
+    subject, sessionCount, studentPrice: '', teacherPrice: '',
+    serviceType: '', subscriptionCycle: '', sessionDuration: '',
+    studentPaymentStatus: 'معلق', studentPaymentDate: '',
+    teacherTransferStatus: '', teacherTransferDate: '',
+    slots: [], groupLink: '', cycleAnchor: startDate || '', sessionUsedOffset: 0,
+    paymentDueDate: '',
+    ledgerSubs: [{ id: uid(), startDate, payStatus, payDate, notes }],
+    archived: false
+  };
+  const { error } = await sb.from('student_records').insert(studentRecordToDb(rec));
+  if(error){ showToast('تعذر الحفظ: ' + dbErrorText(error)); return; }
+  const subUp = await sb.from('student_records').update({ ledger_subs: rec.ledgerSubs }).eq('id', rec.id);
+  if(subUp && subUp.error && /ledger_subs/i.test(String(subUp.error.message||'')+String(subUp.error.details||'')+String(subUp.error.hint||'')+String(subUp.error.code||''))){
+    rec.ledgerSubs = [];
+  }
+  const pErr = await persistParentName(rec.id, parentName);
+  if(pErr === 'missing') rec.parentName = rec.parentName;
+  DATA.student_records.unshift(rec);
+  closeModal(); render(); showToast('تم إضافة الطالب');
+}
+// === نهاية إضافات v26 ===
+
+
 
 
 
@@ -5120,5 +5378,5 @@ async function addStLedgerSub(id){
 
 
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a594f045997f18a0',t:'MTc5NDQ4MDIzNg=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a594f045997f18a0',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a59529e26d608a1c',t:'MTc5NDQ4MjU5Ng=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a59529e26d608a1c',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
