@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261105120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261106120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -399,6 +399,38 @@ html.has-session #authScreen{display:none;}
 .pay-seg-ro span.on.paid{background:#22c55e;color:#fff;box-shadow:0 2px 6px rgba(34,197,94,.35);}
 .pay-seg-ro span.on.hold{background:#f59e0b;color:#fff;box-shadow:0 2px 6px rgba(245,158,11,.35);}
 .pay-seg-ro span.on.unpaid{background:#ef4444;color:#fff;box-shadow:0 2px 6px rgba(239,68,68,.3);}
+.pay-seg span{border:none;background:transparent;border-radius:9px;padding:6px 10px;font-size:11.5px;font-weight:700;color:var(--text-dim);}
+.pay-seg span.on.paid{background:#22c55e;color:#fff;box-shadow:0 2px 6px rgba(34,197,94,.35);}
+.pay-seg span.on.hold{background:#f59e0b;color:#fff;box-shadow:0 2px 6px rgba(245,158,11,.35);}
+.pay-seg span.on.unpaid{background:#ef4444;color:#fff;box-shadow:0 2px 6px rgba(239,68,68,.3);}
+.st-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;}
+.st-hero-sub{margin:4px 0 0;font-size:12px;color:var(--text-dim);line-height:1.7;}
+.st-hero-count{flex:none;font-size:11px;font-weight:800;color:var(--text-dim);background:#f8fafc;padding:4px 10px;border-radius:10px;}
+.st-add-main{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px;border:none;border-radius:18px;background:linear-gradient(135deg,#14b8a6,#0d9488);color:#fff;font-size:16px;font-weight:800;box-shadow:0 4px 14px rgba(13,148,136,.35);cursor:pointer;margin-bottom:14px;}
+.st-groups{display:grid;grid-template-columns:1fr;gap:14px;}
+@media(min-width:860px){.st-groups{grid-template-columns:repeat(2,1fr);}}
+.st-group{background:#fff;border:1px solid var(--line);border-right:5px solid #14b8a6;border-radius:20px;padding:12px;box-shadow:0 2px 10px rgba(15,23,42,.05);}
+.st-ghead{display:flex;align-items:center;gap:10px;padding-bottom:10px;margin-bottom:8px;border-bottom:1px dashed var(--line);}
+.st-gic{width:38px;height:38px;flex:none;border-radius:12px;background:#ccfbf1;display:flex;align-items:center;justify-content:center;font-size:19px;}
+.st-gid{flex:1;min-width:0;}
+.st-phone{font-family:'Cairo',sans-serif;font-weight:800;font-size:15px;color:var(--ink);direction:ltr;text-align:right;letter-spacing:.2px;}
+.st-phone.none{font-family:inherit;font-size:12.5px;color:var(--text-dim);direction:rtl;}
+.st-gsub{font-size:11px;color:var(--text-dim);margin-top:1px;}
+.st-kid{border:1px solid var(--line);border-radius:16px;padding:10px;margin-top:8px;background:#f8fffe;}
+.st-kid-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.st-kid-grid label,.st-sub-grid label,.st-notes{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;color:var(--text-dim);}
+.st-kid-grid input,.st-kid-grid select,.st-sub-grid input,.st-notes input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-weight:600;color:var(--ink);background:#fff;}
+.st-sub{margin-top:10px;padding:10px;border-radius:14px;background:#fff;border:1px dashed #99f6e4;}
+.st-sub-h{font-size:12px;font-weight:800;color:#0f766e;margin-bottom:8px;}
+.st-sub-grid{display:grid;grid-template-columns:1fr;gap:8px;}
+@media(min-width:640px){.st-sub-grid{grid-template-columns:1fr 1fr 1fr;}}
+.st-notes{margin-top:8px;}
+.st-kid-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.st-btn-save{border:none;background:var(--ink);color:#fff;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;}
+.st-btn-ghost,.st-add-sib{border:1px dashed #99f6e4;background:#f0fdfa;color:#0f766e;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;}
+.st-add-sib{display:block;width:100%;margin-top:10px;}
+.st-legacy{margin-top:18px;}
+.st-legacy summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--text-dim);padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:12px;}
 .pay-modal-note{font-size:12px;color:var(--text-dim);line-height:1.85;margin:0 0 12px;}
 .pay-card{border-radius:20px;}
 .pay-row{border-radius:16px;}
@@ -1209,6 +1241,7 @@ function mapStudentRecord(r){
     cycleAnchor:r.cycle_anchor||'', // === تعديل: بداية دورة الاشتراك الحالية (يُضبط عند "تجديد الاشتراك" من المدفوعات) ===
     sessionUsedOffset: parseInt(r.session_used_offset, 10) || 0, // === v23: فرق التعديل اليدوي عن عدّاد الحضور ===
     paymentDueDate: String(r.payment_due_date || '').slice(0, 10), // === v24: موعد الدفع (تاريخ فقط) ===
+    ledgerSubs: mapLedgerSubs(r.ledger_subs), // === v25: اشتراكات كشف المالك ===
     archived:!!r.archived
   };
 }
@@ -1644,21 +1677,9 @@ function filterTrialSessions(){
 }
 
 let studentFilter = 'الكل';
+let stLedgerQuery = '';
 function pageStudents(){
-  const list = DATA.students.filter(s=> studentFilter==='الكل' ? !s.archived : (studentFilter==='مؤرشف'? s.archived : (!s.archived && s.status===studentFilter)));
-  const filters = ['الكل','تجريبي','مشترك','متوقف','مؤرشف'];
-  return `
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <h1 class="page-title">الطلاب</h1>
-      <button class="icon-btn" style="background:var(--ink);color:#fff;" onclick="openStudentModal()">${ICON.plus} إضافة</button>
-    </div>
-    <div style="display:flex;gap:6px;margin:10px 0;flex-wrap:wrap;">
-      ${filters.map(f=>`<button style="padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:${studentFilter===f?'var(--ink)':'#fff'};color:${studentFilter===f?'#fff':'var(--text-dim)'};font-size:11px;" onclick="studentFilter='${f}';render()">${f}</button>`).join('')}
-    </div>
-    <div class="list">
-      ${list.length? list.map(s=>studentCard(s)).join('') : `<div class="empty">${ICON.empty}<div>لا يوجد طلاب</div></div>`}
-    </div>
-  `;
+  return stOwnerPage();
 }
 function studentCard(s){
   const subs = (s.subjects||[]).join('، ');
@@ -3508,18 +3529,18 @@ function payStudentRow(s){
     ? `<button type="button" class="pay-due-badge tone-${dueTone}" title="تعديل موعد الدفع" onclick="openPayDueModal('${jsAttr(r.id)}')">📅 موعد الدفع ${esc(formatPayDue(due))}</button>`
     : `<button type="button" class="pay-due-btn" onclick="openPayDueModal('${jsAttr(r.id)}')">📅 موعد الدفع</button>`;
   const canPay = isOwner();
-  const actions = canPay
-    ? `<div class="pay-seg">
-        <button class="${st.kind==='دفع'?'on paid':''}" onclick="setPayStatus('${jsAttr(r.id)}', true)">دفع</button>
-        <button class="${st.kind==='معلق'?'on hold':''}" onclick="setPayKind('${jsAttr(r.id)}', 'معلق')">معلق</button>
-        <button class="${st.kind==='لم يدفع'?'on unpaid':''}" onclick="setPayStatus('${jsAttr(r.id)}', false)">لم يدفع</button>
+  const canHold = canEditStudentPay(r);
+  const actions = `<div class="pay-seg">
+        ${canPay
+          ? `<button class="${st.kind==='دفع'?'on paid':''}" onclick="setPayStatus('${jsAttr(r.id)}', true)">دفع</button>`
+          : `<span class="${st.kind==='دفع'?'on paid':''}">دفع</span>`}
+        ${canHold
+          ? `<button class="${st.kind==='معلق'?'on hold':''}" onclick="setPayKind('${jsAttr(r.id)}', 'معلق')">معلق</button>
+        <button class="${st.kind==='لم يدفع'?'on unpaid':''}" onclick="setPayStatus('${jsAttr(r.id)}', false)">لم يدفع</button>`
+          : `<span class="${st.kind==='معلق'?'on hold':''}">معلق</span>
+        <span class="${st.kind==='لم يدفع'?'on unpaid':''}">لم يدفع</span>`}
       </div>
-      <button class="pay-renew ${st.state==='done'?'hot':''}" title="تصفير عداد الحصص وبدء دورة جديدة" onclick="renewSubscription('${jsAttr(r.id)}')">🔄 تجديد</button>`
-    : `<div class="pay-seg pay-seg-ro" title="حالة الدفع">
-        <span class="${st.kind==='دفع'?'on paid':''}">دفع</span>
-        <span class="${st.kind==='معلق'?'on hold':''}">معلق</span>
-        <span class="${st.kind==='لم يدفع'?'on unpaid':''}">لم يدفع</span>
-      </div>`;
+      ${canHold ? `<button class="pay-renew ${st.state==='done'?'hot':''}" title="تصفير عداد الحصص وبدء دورة جديدة" onclick="renewSubscription('${jsAttr(r.id)}')">🔄 تجديد</button>` : ''}`;
   return `<div class="pay-row st-${st.state}">
     <div class="pay-r1"><div class="pay-name" title="${escAttr(r.studentName||'')}">${esc(r.studentName)||'—'}</div><span class="pay-chip st-${st.state}">${PAY_STATE_LABEL[st.state]}</span></div>
     ${meta ? `<div class="pay-meta">${meta}</div>` : ''}
@@ -3606,12 +3627,13 @@ function setPayFilter(f){ payFilter = f; render(); }
 
 // ---------- التفاعل المالي (للمالك فقط) ----------
 async function setPayStatus(id, paid){
-  if(!isOwner()) return;
   const r = DATA.student_records.find(x=>x.id===id); if(!r) return;
   if(paid){
+    if(!isOwner()) return;
     if(isPaidStatus(r.studentPaymentStatus) && effectivePayKind(r) === 'دفع') return;
     openPayConfirmModal([id], r.studentName || ''); return; // === v16: لا حفظ إلا بعد تأكيد التاريخ والوقت ===
   }
+  if(!canEditStudentPay(r)) return;
   if(storedPayKind(r.studentPaymentStatus) === 'لم يدفع') return;
   const nv = 'لم يدفع';
   const old = r.studentPaymentStatus;
@@ -3633,8 +3655,8 @@ async function payAllInGroup(key){
 }
 // تجديد الاشتراك: يبدأ عدّاد الحصص من الصفر (الحصص المسجلة حتى هذه اللحظة تخص الدورة القديمة) وتعود الحالة إلى "لم يدفع"
 async function renewSubscription(id){
-  if(!isOwner()) return;
   const r = DATA.student_records.find(x=>x.id===id); if(!r) return;
+  if(!canEditStudentPay(r)) return;
   _attMap = null;
   const used = attendedCount(id), total = sessionTotal(r);
   if(!window.confirm(`تجديد اشتراك "${r.studentName}"؟\n\nسيُصفَّر عداد الحصص (${used}${total ? ' من ' + total : ''}) ليبدأ من 0، وتعود الحالة إلى "معلق".`)) return;
@@ -4560,11 +4582,11 @@ function remainChip(r){
 }
 
 async function setPayKind(id, kind){
-  if(!isOwner()) return;
   if(kind === 'دفع') return setPayStatus(id, true);
   if(kind === 'لم يدفع') return setPayStatus(id, false);
   if(kind !== 'معلق') return;
   const r = DATA.student_records.find(x => x.id === id); if(!r) return;
+  if(!canEditStudentPay(r)) return;
   if(storedPayKind(r.studentPaymentStatus) === 'معلق') return;
   const old = r.studentPaymentStatus;
   const oldDate = r.studentPaymentDate;
@@ -4821,6 +4843,274 @@ async function savePayDueDate(clear){
 }
 // === نهاية إضافات v24 ===
 
+// === إضافات v25: تجديد/معلق للمشرفات + كشف طلاب المالك ===
+function canEditStudentPay(r){
+  if(!CURRENT_PROFILE) return false;
+  if(isOwner()) return true;
+  if(CURRENT_PROFILE.role === 'supervisor'){
+    if(!r) return true;
+    return r.supervisorId === CURRENT_PROFILE.id;
+  }
+  return false;
+}
+function mapLedgerSubs(raw){
+  let arr = raw;
+  if(typeof arr === 'string'){
+    try{ arr = JSON.parse(arr); }catch(e){ arr = []; }
+  }
+  if(!Array.isArray(arr)) arr = [];
+  return arr.map((x, i) => ({
+    id: (x && x.id) ? String(x.id) : ('sub-'+i),
+    startDate: String((x && (x.startDate || x.start_date)) || '').slice(0, 10),
+    payStatus: String((x && (x.payStatus || x.pay_status)) || ''),
+    payDate: String((x && (x.payDate || x.pay_date)) || '').slice(0, 10),
+    notes: String((x && x.notes) || '')
+  }));
+}
+function stLedgerSubsOf(r){
+  const subs = mapLedgerSubs(r && r.ledgerSubs);
+  if(subs.length) return subs;
+  const start = String((r && r.cycleAnchor) || '').slice(0, 10);
+  const payDate = String((r && r.studentPaymentDate) || '').slice(0, 10);
+  const payStatus = (r && r.studentPaymentStatus) || '';
+  return [{
+    id: 'seed',
+    startDate: /^\d{4}-\d{2}-\d{2}$/.test(start) ? start : '',
+    payStatus: payStatus,
+    payDate: /^\d{4}-\d{2}-\d{2}$/.test(payDate) ? payDate : '',
+    notes: ''
+  }];
+}
+function stTeacherOptions(selected){
+  const sel = String(selected || '');
+  const seen = {};
+  const names = [];
+  (DATA.teachers || []).forEach(t => {
+    if(!t || t.archived || !t.name || seen[t.name]) return;
+    seen[t.name] = 1;
+    names.push(t.name);
+  });
+  names.sort((a,b)=> String(a).localeCompare(String(b), 'ar'));
+  if(sel && !seen[sel]) names.unshift(sel);
+  return `<option value="">— اختاري المعلمة —</option>` + names.map(n => `<option value="${escAttr(n)}" ${n===sel?'selected':''}>${esc(n)}</option>`).join('');
+}
+function stOwnerGroups(){
+  const q = (stLedgerQuery || '').trim().toLowerCase();
+  const qDigits = toLatinDigits(q).replace(/\D/g, '');
+  const groups = new Map();
+  (DATA.student_records || []).forEach(r => {
+    if(r.archived) return;
+    if(q){
+      const hit = (r.studentName||'').toLowerCase().includes(q) ||
+        (r.teacherName||'').toLowerCase().includes(q) ||
+        (r.subject||'').toLowerCase().includes(q) ||
+        (qDigits.length >= 3 && toLatinDigits(r.studentPhone||'').replace(/\D/g,'').includes(qDigits));
+      if(!hit) return;
+    }
+    const pk = payPhoneKey(r.studentPhone);
+    const key = pk ? ('p:' + pk) : ('i:' + r.id);
+    let g = groups.get(key);
+    if(!g){ g = { key, phone: r.studentPhone || '', students: [] }; groups.set(key, g); }
+    if(!g.phone && r.studentPhone) g.phone = r.studentPhone;
+    g.students.push(r);
+  });
+  return Array.from(groups.values()).sort((a,b)=> String(a.phone || (a.students[0] && a.students[0].studentName) || '').localeCompare(String(b.phone || (b.students[0] && b.students[0].studentName) || ''), 'ar'));
+}
+function stKidHtml(r){
+  const subs = stLedgerSubsOf(r);
+  const ordinal = ['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن'];
+  const subHtml = subs.map((sub, idx) => `
+    <div class="st-sub">
+      <div class="st-sub-h">الاشتراك ${ordinal[idx] || (idx+1)}</div>
+      <div class="st-sub-grid">
+        <label>بداية الاشتراك<input type="date" id="stl_start_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.startDate)}"></label>
+        <label>حالة الدفع<input type="text" id="stl_pstat_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.payStatus)}" placeholder="تم الدفع 100 / معلق / نصف المبلغ..."></label>
+        <label>تاريخ الدفع<input type="date" id="stl_pdate_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.payDate)}"></label>
+      </div>
+      <label class="st-notes">ملاحظات<input type="text" id="stl_notes_${escAttr(r.id)}_${escAttr(sub.id)}" value="${escAttr(sub.notes)}" placeholder="اختياري"></label>
+    </div>`).join('');
+  return `<div class="st-kid">
+    <div class="st-kid-grid">
+      <label>اسم الطالب<input id="stl_name_${escAttr(r.id)}" value="${escAttr(r.studentName||'')}" placeholder="اسم الطالب"></label>
+      <label>المعلمة<select id="stl_teacher_${escAttr(r.id)}">${stTeacherOptions(r.teacherName)}</select></label>
+      <label>المادة<input id="stl_subj_${escAttr(r.id)}" value="${escAttr(r.subject||'')}" placeholder="المادة"></label>
+      <label>عدد الحصص<input id="stl_count_${escAttr(r.id)}" value="${escAttr(r.sessionCount||'')}" placeholder="مثال: 8"></label>
+    </div>
+    ${subHtml}
+    <div class="st-kid-actions">
+      <button type="button" class="st-btn-save" onclick="saveStLedgerStudent('${jsAttr(r.id)}')">حفظ</button>
+      <button type="button" class="st-btn-ghost" onclick="addStLedgerSub('${jsAttr(r.id)}')">＋ إضافة اشتراك</button>
+    </div>
+  </div>`;
+}
+function stOwnerListHtml(groups){
+  if(!groups.length) return `<div class="empty">${ICON.empty}<div>لا يوجد طلاب بعد — أضيفي طالب أو استني إضافة المشرفات</div></div>`;
+  return `<div class="st-groups">${groups.map(g => {
+    const phone = g.phone || '';
+    return `<div class="st-group">
+      <div class="st-ghead">
+        <div class="st-gic">${g.students.length > 1 ? '👨‍👩‍👧' : '👤'}</div>
+        <div class="st-gid">
+          ${phone ? `<div class="st-phone">${esc(phone)}</div>` : `<div class="st-phone none">بدون رقم هاتف</div>`}
+          <div class="st-gsub">${g.students.length === 1 ? 'طالب واحد' : (g.students.length + ' طلاب')}</div>
+        </div>
+        ${phone ? `<button class="icon-circle pay-wa" title="واتساب ولي الأمر" onclick="waOpen('${jsAttr(phone)}','')">${ICON.wa}</button>` : ''}
+      </div>
+      ${g.students.map(stKidHtml).join('')}
+      ${phone ? `<button type="button" class="st-add-sib" onclick="openStLedgerAddModal('${jsAttr(phone)}')">＋ طالب لنفس ولي الأمر</button>` : ''}
+    </div>`;
+  }).join('')}</div>`;
+}
+function stOwnerPage(){
+  if(!isOwner()) return '';
+  const groups = stOwnerGroups();
+  const nKids = groups.reduce((n,g)=> n + g.students.length, 0);
+  const list = DATA.students.filter(s=> studentFilter==='الكل' ? !s.archived : (studentFilter==='مؤرشف'? s.archived : (!s.archived && s.status===studentFilter)));
+  const filters = ['الكل','تجريبي','مشترك','متوقف','مؤرشف'];
+  const legacy = `
+    <details class="st-legacy">
+      <summary>سجلات النظام القديم (${list.length})</summary>
+      <div style="display:flex;gap:6px;margin:10px 0;flex-wrap:wrap;">
+        ${filters.map(f=>`<button style="padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:${studentFilter===f?'var(--ink)':'#fff'};color:${studentFilter===f?'#fff':'var(--text-dim)'};font-size:11px;" onclick="studentFilter='${f}';render()">${f}</button>`).join('')}
+      </div>
+      <div class="list">
+        ${list.length? list.map(s=>studentCard(s)).join('') : `<div class="empty">${ICON.empty}<div>لا يوجد طلاب</div></div>`}
+      </div>
+    </details>`;
+  return `
+    <div class="st-hero">
+      <div>
+        <h1 class="page-title">الطلاب</h1>
+        <p class="st-hero-sub">كشف أولياء الأمور من بيانات الطلاب — أي إضافة من المشرفات تظهر هنا فورًا</p>
+      </div>
+      <span class="st-hero-count">${nKids} طالب • ${groups.length} ولي أمر</span>
+    </div>
+    <button type="button" class="st-add-main" onclick="openStLedgerAddModal('')">➕ إضافة طالب جديد</button>
+    <div class="sr-toolbar">
+      <input class="sr-search" id="stLedgerSearch" placeholder="🔍 دوّر باسم الطالب أو رقم ولي الأمر..." value="${esc(stLedgerQuery)}" oninput="stLedgerQuery=this.value; renderStLedgerList();">
+    </div>
+    <div id="stLedgerWrap">${stOwnerListHtml(groups)}</div>
+    ${legacy}
+  `;
+}
+function renderStLedgerList(){
+  const wrap = document.getElementById('stLedgerWrap');
+  if(wrap) wrap.innerHTML = stOwnerListHtml(stOwnerGroups());
+}
+function openStLedgerAddModal(phone){
+  if(!isOwner()) return;
+  const box = document.getElementById('modalBody');
+  if(!box) return;
+  box.innerHTML = `
+    <h3>إضافة طالب جديد</h3>
+    <p class="pay-modal-note">البيانات بتتسجل في بيانات الطلاب وتظهر هنا فورًا. كل الحقول اختيارية ماعدا الاسم.</p>
+    <div class="field"><label>رقم ولي الأمر</label><input id="stl_new_phone" value="${escAttr(phone||'')}" placeholder="01xxxxxxxxx"></div>
+    <div class="field"><label>اسم الطالب</label><input id="stl_new_name" placeholder="اسم الطالب"></div>
+    <div class="field"><label>المعلمة</label><select id="stl_new_teacher">${stTeacherOptions('')}</select></div>
+    <div class="field"><label>المادة</label><input id="stl_new_subj" placeholder="اختياري"></div>
+    <div class="field"><label>عدد الحصص</label><input id="stl_new_count" placeholder="اختياري"></div>
+    <div class="field"><label>بداية الاشتراك</label><input id="stl_new_start" type="date"></div>
+    <div class="field"><label>حالة الدفع</label><input id="stl_new_pstat" placeholder="معلق / تم الدفع 100 / ..."></div>
+    <div class="field"><label>تاريخ الدفع</label><input id="stl_new_pdate" type="date"></div>
+    <div class="field"><label>ملاحظات</label><input id="stl_new_notes" placeholder="اختياري"></div>
+    <div class="modal-actions">
+      <button class="save" onclick="saveStLedgerNew()">حفظ</button>
+      <button class="cancel" onclick="closeModal()">إلغاء</button>
+    </div>`;
+  openModal();
+}
+function stVal(id){
+  const el = document.getElementById(id);
+  return el ? String(el.value || '').trim() : '';
+}
+function readStLedgerSubsFromDom(id, r){
+  return stLedgerSubsOf(r).map(sub => ({
+    id: sub.id === 'seed' ? uid() : sub.id,
+    startDate: stVal('stl_start_'+id+'_'+sub.id),
+    payStatus: stVal('stl_pstat_'+id+'_'+sub.id),
+    payDate: stVal('stl_pdate_'+id+'_'+sub.id),
+    notes: stVal('stl_notes_'+id+'_'+sub.id)
+  }));
+}
+async function saveStLedgerNew(){
+  if(!isOwner()) return;
+  const studentName = stVal('stl_new_name');
+  if(!studentName){ showToast('اكتبي اسم الطالب'); return; }
+  const phone = (typeof cleanPhone === 'function') ? cleanPhone(stVal('stl_new_phone')) : stVal('stl_new_phone');
+  const teacherName = stVal('stl_new_teacher');
+  const subject = stVal('stl_new_subj');
+  const sessionCount = stVal('stl_new_count');
+  const startDate = stVal('stl_new_start');
+  const payStatus = stVal('stl_new_pstat');
+  const payDate = stVal('stl_new_pdate');
+  const notes = stVal('stl_new_notes');
+  const currentUid = await getCurrentUserId();
+  const rec = {
+    id: uid(),
+    supervisorId: currentUid || '',
+    studentName, studentPhone: phone, teacherName, teacherPhone: '',
+    subject, sessionCount, studentPrice: '', teacherPrice: '',
+    serviceType: '', subscriptionCycle: '', sessionDuration: '',
+    studentPaymentStatus: 'معلق', studentPaymentDate: '',
+    teacherTransferStatus: '', teacherTransferDate: '',
+    slots: [], groupLink: '', cycleAnchor: startDate || '', sessionUsedOffset: 0,
+    paymentDueDate: '',
+    ledgerSubs: [{ id: uid(), startDate, payStatus, payDate, notes }],
+    archived: false
+  };
+  const { error } = await sb.from('student_records').insert(studentRecordToDb(rec));
+  if(error){ showToast('تعذر الحفظ: ' + dbErrorText(error)); return; }
+  const subUp = await sb.from('student_records').update({ ledger_subs: rec.ledgerSubs }).eq('id', rec.id);
+  if(subUp && subUp.error && /ledger_subs/i.test(String(subUp.error.message||'')+String(subUp.error.details||'')+String(subUp.error.hint||'')+String(subUp.error.code||''))){
+    rec.ledgerSubs = [];
+  }
+  DATA.student_records.unshift(rec);
+  closeModal(); render(); showToast('تم إضافة الطالب');
+}
+async function saveStLedgerStudent(id){
+  if(!isOwner()) return;
+  const r = DATA.student_records.find(x => x.id === id); if(!r) return;
+  const old = { n: r.studentName, t: r.teacherName, s: r.subject, c: r.sessionCount, l: r.ledgerSubs };
+  const subs = readStLedgerSubsFromDom(id, r);
+  r.studentName = stVal('stl_name_'+id) || r.studentName;
+  r.teacherName = stVal('stl_teacher_'+id);
+  r.subject = stVal('stl_subj_'+id);
+  r.sessionCount = stVal('stl_count_'+id);
+  r.ledgerSubs = subs;
+  const { error } = await sb.from('student_records').update(studentRecordToDb(r)).eq('id', id);
+  if(error){
+    r.studentName = old.n; r.teacherName = old.t; r.subject = old.s; r.sessionCount = old.c; r.ledgerSubs = old.l;
+    showToast('تعذر الحفظ: ' + dbErrorText(error)); return;
+  }
+  const subUp = await sb.from('student_records').update({ ledger_subs: r.ledgerSubs }).eq('id', id);
+  if(subUp && subUp.error){
+    const msg = String(subUp.error.message||'')+String(subUp.error.details||'')+String(subUp.error.hint||'')+String(subUp.error.code||'');
+    if(/ledger_subs/i.test(msg)){
+      showToast('⚠️ نفّذي ملف SQL الإصدار 25 في Supabase (عمود ledger_subs)');
+      return;
+    }
+    showToast('تعذر حفظ الاشتراكات: ' + dbErrorText(subUp.error)); return;
+  }
+  render();
+  showToast('تم الحفظ');
+}
+async function addStLedgerSub(id){
+  if(!isOwner()) return;
+  const r = DATA.student_records.find(x => x.id === id); if(!r) return;
+  r.ledgerSubs = readStLedgerSubsFromDom(id, r);
+  r.ledgerSubs.push({ id: uid(), startDate: '', payStatus: '', payDate: '', notes: '' });
+  const subUp = await sb.from('student_records').update({ ledger_subs: r.ledgerSubs }).eq('id', id);
+  if(subUp && subUp.error){
+    r.ledgerSubs.pop();
+    const msg = String(subUp.error.message||'')+String(subUp.error.details||'')+String(subUp.error.hint||'')+String(subUp.error.code||'');
+    showToast(/ledger_subs/i.test(msg) ? '⚠️ نفّذي ملف SQL الإصدار 25 في Supabase (عمود ledger_subs)' : ('تعذر إضافة الاشتراك: ' + dbErrorText(subUp.error)));
+    return;
+  }
+  render();
+}
+// === نهاية إضافات v25 ===
+
+
 
 
 
@@ -4830,5 +5120,5 @@ async function savePayDueDate(clear){
 
 
 </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a594f045997f18a0',t:'MTc5NDQ4MDIzNg=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a594f045997f18a0',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
