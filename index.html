@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261109120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261110120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -187,7 +187,7 @@ input,select,textarea{font-family:inherit;}
 }
 /* ===== بيانات الطلاب (Student Records) ===== */
 .sr-toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
-.sr-search{flex:1;min-width:160px;padding:10px 14px;border:1.5px solid var(--line);border-radius:12px;font-size:13px;background:#fff;}
+.sr-search{flex:1;min-width:160px;padding:10px 14px;border:1.5px solid var(--line);border-radius:12px;font-size:16px;background:#fff;}
 .sr-grid{display:grid;grid-template-columns:1fr;gap:14px;}
 .sr-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 2px 10px rgba(15,23,42,0.05);position:relative;transition:transform .15s,box-shadow .15s;}
 .sr-card:hover{box-shadow:0 6px 18px rgba(15,23,42,0.09);}
@@ -394,6 +394,26 @@ html.has-session #authScreen{display:none;}
 .pay-due-badge.tone-soon{background:#fff7ed;color:#c2410c;box-shadow:0 0 0 2px #fdba74;}
 .pay-due-badge.tone-today{background:#fef3c7;color:#92400e;box-shadow:0 0 0 2px #f59e0b;}
 .pay-due-badge.tone-over{background:#fef2f2;color:#b91c1c;box-shadow:0 0 0 2px #f87171;}
+.pay-due-board{margin:0 0 14px;padding:12px;border-radius:18px;background:linear-gradient(180deg,#ecfeff,#fff);border:1px solid #a5f3fc;box-shadow:0 6px 16px rgba(8,145,178,.12);}
+.pay-due-h{font-size:14px;font-weight:800;color:#0e7490;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.pay-due-h span{background:#22d3ee;color:#164e63;border-radius:999px;padding:1px 8px;font-size:11px;}
+.pay-due-empty{font-size:12px;color:#0e7490;font-weight:700;padding:8px 0;}
+.pay-due-list{display:flex;flex-direction:column;gap:8px;}
+.pay-due-card{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:14px;background:#fff;border:1px solid #cffafe;}
+.pay-due-card.tone-over{border-color:#fca5a5;background:#fef2f2;}
+.pay-due-card.tone-today{border-color:#fcd34d;background:#fffbeb;}
+.pay-due-card.tone-soon{border-color:#fdba74;background:#fff7ed;}
+.pay-due-date{flex:none;min-width:72px;font-size:12px;font-weight:800;color:#0f766e;background:#ccfbf1;border-radius:10px;padding:6px 8px;text-align:center;}
+.pay-due-body{flex:1;min-width:0;}
+.pay-due-name{font-size:13px;font-weight:800;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pay-due-meta{font-size:11px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pay-due-kind{flex:none;font-size:10px;font-weight:800;border-radius:999px;padding:4px 8px;}
+.pay-due-kind.k-paid{background:#dcfce7;color:#166534;}
+.pay-due-kind.k-hold{background:#fef3c7;color:#92400e;}
+.pay-due-kind.k-unpaid{background:#fee2e2;color:#991b1b;}
+.pay-seg button{white-space:normal;line-height:1.25;font-size:10.5px;padding:6px 8px;}
+#globalSearch,#f_trTeacherSearch,#f_sTeacherSearch,#stl_link_q{font-size:16px!important;}
+
 .pay-seg-ro{pointer-events:none;}
 .pay-seg-ro span{border:none;background:transparent;border-radius:9px;padding:6px 10px;font-size:11.5px;font-weight:700;color:var(--text-dim);}
 .pay-seg-ro span.on.paid{background:#22c55e;color:#fff;box-shadow:0 2px 6px rgba(34,197,94,.35);}
@@ -3647,23 +3667,23 @@ function pagePayments(){
     <div class="pay-hero">
       <div>
         <h1 class="page-title">💳 المدفوعات</h1>
-        <p class="pay-hero-sub">ثلاث حالات: معلق (بداية الدورة) • دفع (اشتراك مؤكد) • لم يدفع (الباقة خلصت من غير دفع). التحويل يتم تلقائي مع استهلاك الحصص.</p>
+        <p class="pay-hero-sub">ثلاث حالات يدوية: دفع ويستمر بعد الانتهاء • حتى انتهاء الاشتراك فقط • يجب توقف الحصص. الحالة مش مربوطة بعدد الحصص.</p>
       </div>
       <span class="pay-hero-count">${model.length} ولي أمر</span>
     </div>
     <div class="stat-row pay-stats">
       <div class="stat-card"><div class="num">${model.length}</div><div class="lbl">أولياء الأمور</div></div>
       <div class="stat-card"><div class="num">${all.length}</div><div class="lbl">الطلاب</div></div>
-      <div class="stat-card pay-stat-hold"><div class="num">${holdN}</div><div class="lbl">معلق</div></div>
-      <div class="stat-card pay-stat-unpaid"><div class="num">${unpaidN}</div><div class="lbl">لم يدفع</div></div>
-      <div class="stat-card pay-stat-paid"><div class="num">${paidN}</div><div class="lbl">دفع</div></div>
+      <div class="stat-card pay-stat-hold"><div class="num">${holdN}</div><div class="lbl">حتى انتهاء الاشتراك</div></div>
+      <div class="stat-card pay-stat-unpaid"><div class="num">${unpaidN}</div><div class="lbl">توقف الحصص</div></div>
+      <div class="stat-card pay-stat-paid"><div class="num">${paidN}</div><div class="lbl">دفع ويستمر</div></div>
     </div>
     ${needCollect?`<div class="pay-alert">🔴 ${needCollect} انتهت حصصهم ولسه ما دفعوش — راجعهم الأول</div>`:''}
     <div class="pay-chips">
       ${payChip('all','الكل',all.length)}
-      ${payChip('hold','معلق',holdN)}
-      ${payChip('unpaid','لم يدفع',unpaidN)}
-      ${payChip('paid','دفع',paidN)}
+      ${payChip('hold','حتى انتهاء الاشتراك',holdN)}
+      ${payChip('unpaid','توقف الحصص',unpaidN)}
+      ${payChip('paid','دفع ويستمر',paidN)}
       ${payChip('done','🔴 انتهت',cnt('done'))}
       ${payChip('warn','🟠 أوشكت',cnt('warn'))}
       ${payChip('ok','🟢 رصيد متاح',cnt('ok'))}
@@ -3672,6 +3692,7 @@ function pagePayments(){
     <div class="sr-toolbar">
       <input class="sr-search" id="paySearchInput" placeholder="🔍 دوّر باسم الطالب أو رقم ولي الأمر..." value="${esc(payQuery)}" oninput="payQuery=this.value; renderPayList();">
     </div>
+    ${payDueBoardHtml(model)}
     <div id="payListWrap">${payListHtml(model)}</div>
     ${(isOwner() && legacyCount) ? `<details class="pay-legacy"><summary>📂 طلاب النظام القديم (${legacyCount})</summary>${pagePaymentsLegacy()}</details>` : ''}
   `;
@@ -3686,7 +3707,7 @@ function setPayFilter(f){ payFilter = f; render(); }
 async function setPayStatus(id, paid){
   const r = DATA.student_records.find(x=>x.id===id); if(!r) return;
   if(paid){
-    if(!isOwner()) return;
+    if(!canEditStudentPay(r)) return;
     if(isPaidStatus(r.studentPaymentStatus) && effectivePayKind(r) === 'دفع') return;
     openPayConfirmModal([id], r.studentName || ''); return; // === v16: لا حفظ إلا بعد تأكيد التاريخ والوقت ===
   }
@@ -4411,7 +4432,7 @@ function formatPayWhen(v){
 }
 
 function openPayConfirmModal(ids, names){
-  if(!isOwner()) return;
+  if(!CURRENT_PROFILE) return;
   window._payPendingIds = (ids || []).slice();
   if(!window._payPendingIds.length) return;
   const now = payDeviceNow();
@@ -4430,7 +4451,7 @@ function openPayConfirmModal(ids, names){
 }
 
 async function confirmPayWithWhen(){
-  if(!isOwner()) return;
+  if(!CURRENT_PROFILE) return;
   const ids = (window._payPendingIds || []).slice();
   if(!ids.length){ showToast('⚠️ مفيش طالب محدد'); return; }
   const dEl = document.getElementById('f_payDate');
@@ -5641,7 +5662,7 @@ function stListPage(){
     <button type="button" class="st-add-main" onclick="stInlineAdd=!stInlineAdd;stInlineSib=false;render()">➕ إضافة طالب جديد</button>
     ${stInlineAdd ? stInlineAddForm('stnew', 'طالب جديد') : ''}
     <div class="sr-toolbar">
-      <input class="sr-search" id="stLedgerSearch" placeholder="🔍 اسم الطالب..." value="${esc(stLedgerQuery)}" oninput="stLedgerQuery=this.value; render();">
+      <input class="sr-search" id="stLedgerSearch" placeholder="🔍 اسم الطالب..." value="${esc(stLedgerQuery)}" autocomplete="off" enterkeyhint="search" autocapitalize="off" oninput="stLedgerQuery=this.value; renderStLedgerList();">
     </div>
     <div id="stLedgerWrap" class="st-minis">${recs.length ? recs.map(stMiniCard).join('') : `<div class="empty">${ICON.empty}<div>لا يوجد طلاب</div></div>`}</div>
   `;
@@ -5765,6 +5786,103 @@ async function deleteStDetail(id, name){
 }
 // === نهاية إضافات v28 ===
 
+// === إضافات v29: تسميات المدفوعات + حالة يدوية + لوحة مواعيد الدفع + ثبات البحث ===
+function payKindLabel(kind, mode){
+  const m = {
+    'دفع': { short: 'دفع ويستمر', full: 'دفع ويستمر في اشتراك جديد بعد انتهاء' },
+    'معلق': { short: 'حتى انتهاء الاشتراك', full: 'يستمر إلى انتهاء الاشتراك فقط' },
+    'لم يدفع': { short: 'توقف الحصص', full: 'يجب توقف الحصص' }
+  };
+  const x = m[kind] || m['معلق'];
+  return mode === 'full' ? x.full : x.short;
+}
+function effectivePayKind(r){
+  return storedPayKind(r && r.studentPaymentStatus);
+}
+function paymentBadge(r){
+  const k = effectivePayKind(r);
+  if(k === 'دفع') return `<span class="pay-pill pay-k-paid" title="${payKindLabel('دفع','full')}">🟢 ${payKindLabel('دفع')}</span>`;
+  if(k === 'معلق') return `<span class="pay-pill pay-k-hold" title="${payKindLabel('معلق','full')}">🟡 ${payKindLabel('معلق')}</span>`;
+  return `<span class="pay-pill pay-k-due" title="${payKindLabel('لم يدفع','full')}">🔴 ${payKindLabel('لم يدفع')}</span>`;
+}
+async function syncPayCycles(){
+  return;
+}
+function renderStLedgerList(){
+  const wrap = document.getElementById('stLedgerWrap');
+  if(!wrap) return;
+  if(typeof stView !== 'undefined' && stView === 'detail') return;
+  if(wrap.classList.contains('st-minis') && typeof stActiveRecords === 'function'){
+    const recs = stActiveRecords();
+    wrap.innerHTML = recs.length ? recs.map(stMiniCard).join('') : `<div class="empty">${ICON.empty}<div>لا يوجد طلاب</div></div>`;
+    return;
+  }
+  if(typeof stOwnerListHtml === 'function') wrap.innerHTML = stOwnerListHtml(stOwnerGroups());
+}
+function payDueBoardHtml(model){
+  const items = [];
+  (model || []).forEach(g => {
+    (g.students || []).forEach(s => {
+      const d = String((s.r && s.r.paymentDueDate) || '').slice(0, 10);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(d)) items.push({ s, g, d });
+    });
+  });
+  items.sort((a,b)=> a.d.localeCompare(b.d) || String(a.s.r.studentName||'').localeCompare(String(b.s.r.studentName||''), 'ar'));
+  if(!items.length){
+    return `<section class="pay-due-board"><div class="pay-due-h">📅 مواعيد الدفع</div><div class="pay-due-empty">مافيش مواعيد متجدولة — من كارت الطالب اضغطي «موعد الدفع»</div></section>`;
+  }
+  return `<section class="pay-due-board">
+    <div class="pay-due-h">📅 مواعيد الدفع <span>${items.length}</span></div>
+    <div class="pay-due-list">${items.map(({s,g,d}) => {
+      const tone = payDueTone(d);
+      const k = s.st && s.st.kind;
+      return `<article class="pay-due-card tone-${tone}">
+        <div class="pay-due-date">${esc(formatPayDue(d))}</div>
+        <div class="pay-due-body">
+          <div class="pay-due-name">${esc(s.r.studentName || '—')}</div>
+          <div class="pay-due-meta">${esc(g.phone || '')}${s.r.teacherName ? ' · ' + esc(s.r.teacherName) : ''}</div>
+        </div>
+        <span class="pay-due-kind k-${k === 'دفع' ? 'paid' : k === 'معلق' ? 'hold' : 'unpaid'}">${payKindLabel(k)}</span>
+      </article>`;
+    }).join('')}</div>
+  </section>`;
+}
+function payStudentRow(s){
+  const r = s.r, st = s.st;
+  const meta = [r.subject, r.teacherName ? '👩‍🏫 ' + r.teacherName : ''].filter(Boolean).map(esc).join(' • ');
+  const prog = st.total
+    ? `<div class="pay-bar"><i style="width:${st.pct}%"></i></div><b>${st.used} من ${st.total}</b>`
+    : `<div class="pay-bar"><i style="width:0%"></i></div><b>حضر ${st.used}</b>`;
+  const due = String(r.paymentDueDate || '').slice(0, 10);
+  const dueTone = payDueTone(due);
+  const dueHtml = due
+    ? `<button type="button" class="pay-due-badge tone-${dueTone}" title="تعديل موعد الدفع" onclick="openPayDueModal('${jsAttr(r.id)}')">📅 موعد الدفع ${esc(formatPayDue(due))}</button>`
+    : `<button type="button" class="pay-due-btn" onclick="openPayDueModal('${jsAttr(r.id)}')">📅 موعد الدفع</button>`;
+  const canPay = canEditStudentPay(r);
+  const actions = `<div class="pay-seg">
+        ${canPay
+          ? `<button class="${st.kind==='دفع'?'on paid':''}" data-kind="دفع" title="${payKindLabel('دفع','full')}" onclick="setPayStatus('${jsAttr(r.id)}', true)">${payKindLabel('دفع')}</button>
+        <button class="${st.kind==='معلق'?'on hold':''}" data-kind="معلق" title="${payKindLabel('معلق','full')}" onclick="setPayKind('${jsAttr(r.id)}', 'معلق')">${payKindLabel('معلق')}</button>
+        <button class="${st.kind==='لم يدفع'?'on unpaid':''}" data-kind="لم يدفع" title="${payKindLabel('لم يدفع','full')}" onclick="setPayStatus('${jsAttr(r.id)}', false)">${payKindLabel('لم يدفع')}</button>`
+          : `<span class="${st.kind==='دفع'?'on paid':''}">${payKindLabel('دفع')}</span>
+        <span class="${st.kind==='معلق'?'on hold':''}">${payKindLabel('معلق')}</span>
+        <span class="${st.kind==='لم يدفع'?'on unpaid':''}">${payKindLabel('لم يدفع')}</span>`}
+      </div>
+      ${canPay ? `<button class="pay-renew ${st.state==='done'?'hot':''}" title="تصفير عداد الحصص وبدء دورة جديدة" onclick="renewSubscription('${jsAttr(r.id)}')">🔄 تجديد</button>` : ''}`;
+  return `<div class="pay-row st-${st.state}">
+    <div class="pay-r1"><div class="pay-name" title="${escAttr(r.studentName||'')}">${esc(r.studentName)||'—'}</div><span class="pay-chip st-${st.state}">${PAY_STATE_LABEL[st.state]}</span></div>
+    ${meta ? `<div class="pay-meta">${meta}</div>` : ''}
+    ${st.paid && r.studentPaymentDate ? `<div class="pay-when">📅 ${esc(formatPayWhen(r.studentPaymentDate))}</div>` : ''}
+    ${dueHtml}
+    <div class="pay-prog">${prog}</div>
+    <div class="pay-r3">
+      ${actions}
+    </div>
+  </div>`;
+}
+// === نهاية إضافات v29 ===
+
+
 
 
 
@@ -5778,5 +5896,5 @@ async function deleteStDetail(id, name){
 
 
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5957eddff96121e',t:'MTc5NDQ4NjA3Nw=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5957eddff96121e',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5a9ccb18d6e3cd2',t:'MTc5NDY5ODk4MA=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5a9ccb18d6e3cd2',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
