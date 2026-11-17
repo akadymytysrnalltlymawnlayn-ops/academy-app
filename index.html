@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261110120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261111120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -413,6 +413,17 @@ html.has-session #authScreen{display:none;}
 .pay-due-kind.k-unpaid{background:#fee2e2;color:#991b1b;}
 .pay-seg button{white-space:normal;line-height:1.25;font-size:10.5px;padding:6px 8px;}
 #globalSearch,#f_trTeacherSearch,#f_sTeacherSearch,#stl_link_q{font-size:16px!important;}
+.pay-due-entry{width:100%;display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:12px 14px;border:0;border-radius:18px;background:linear-gradient(180deg,#ecfeff,#fff);border:1px solid #67e8f9;box-shadow:0 8px 18px rgba(8,145,178,.16);cursor:pointer;text-align:right;}
+.pay-due-entry-ic{flex:none;width:42px;height:42px;border-radius:14px;background:#22d3ee;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.pay-due-entry-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.pay-due-entry-txt b{font-size:15px;font-weight:800;color:#0e7490;}
+.pay-due-entry-txt small{font-size:11px;font-weight:700;color:#0f766e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pay-due-entry-n{flex:none;min-width:28px;height:28px;border-radius:999px;background:#0891b2;color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 8px;}
+.pay-due-entry-go{flex:none;background:#cffafe;color:#155e75;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:800;}
+.pay-due-hero{background:linear-gradient(180deg,#ecfeff,#fff);border:1px solid #a5f3fc;}
+.pay-back{display:inline-flex;align-items:center;}
+.st-due-open{width:100%;border:1px solid #a5f3fc;background:#ecfeff;color:#0e7490;border-radius:12px;padding:8px 10px;font-size:12px;font-weight:800;cursor:pointer;text-align:right;}
+
 
 .pay-seg-ro{pointer-events:none;}
 .pay-seg-ro span{border:none;background:transparent;border-radius:9px;padding:6px 10px;font-size:11.5px;font-weight:700;color:var(--text-dim);}
@@ -1656,6 +1667,7 @@ function goTo(route){
     if(route === 'schedule_sessions') scheduleDay = todayArIdx();
     if(route === 'student_records') srSupFilter = 'all'; // === تعديل: عند فتح بيانات الطلاب يبدأ العرض بـ "الإجمالي" (كل الطلاب) ===
     if(route === 'students'){ stView = 'list'; stDetailId = ''; stInlineAdd = false; stInlineSib = false; }
+    if(route !== 'payments') payView = 'main';
     safeHistory(()=>history.pushState({route: ROUTE, modal:false}, '', location.pathname + location.search));
     render(); 
     window.scrollTo(0,0); 
@@ -4003,11 +4015,11 @@ async function deleteRecord(type, id, label){ if(!isOwner()) return showToast('�
 }
 
 function openModal(){
-  safeHistory(()=>history.pushState({route: ROUTE, modal:true}, '', location.pathname + location.search));
+  safeHistory(()=>history.pushState({route: ROUTE, modal:true, payView: (typeof payView==='string'?payView:'main')}, '', location.pathname + location.search));
   document.getElementById('modalBg').classList.add('show');
 }
 function closeModal(){
-  safeHistory(()=>history.replaceState({route: ROUTE, modal:false}, '', location.pathname + location.search));
+  safeHistory(()=>history.replaceState({route: ROUTE, modal:false, payView: (typeof payView==='string'?payView:'main')}, '', location.pathname + location.search));
   document.getElementById('modalBg').classList.remove('show');
 }
 document.getElementById('modalBg').addEventListener('click', e=>{ if(e.target.id==='modalBg') closeModal(); });
@@ -4020,6 +4032,7 @@ window.addEventListener('popstate', e=>{
   const state = e.state || {route:'dashboard', modal:false};
   ROUTE = (!isOwner() && !SUPERVISOR_ALLOWED_ROUTES.includes(state.route)) ? 'schedule_sessions' : state.route;
   if(ROUTE==='attendance') ROUTE = 'followups'; // === تعديل: المسار القديم يفتح التبويب الجديد ===
+  payView = (state && state.payView) ? state.payView : (ROUTE==='payments' ? (typeof payView==='string' ? payView : 'main') : 'main');
   render();
   const modalBg = document.getElementById('modalBg');
   if(state.modal){ modalBg.classList.add('show'); }
@@ -5717,6 +5730,9 @@ function stDetailPage(r){
         <label>المادة<input id="stl_subj_${escAttr(r.id)}" value="${escAttr(r.subject||'')}" placeholder="المادة"></label>
         <label>الحصص<input id="stl_count_${escAttr(r.id)}" value="${escAttr(r.sessionCount||'')}" placeholder="8"></label>
       </div>
+      <div class="st-due-row" style="padding:0 8px 8px">
+        <button type="button" class="st-due-open" onclick="openPayDueModal('${jsAttr(r.id)}')">📅 موعد الدفع${r.paymentDueDate ? ' · ' + esc(formatPayDue(r.paymentDueDate)) : ''}</button>
+      </div>
       <div class="st-kid-actions" style="padding:0 8px 8px">
         <button type="button" class="st-btn-save" onclick="saveStLedgerStudent('${jsAttr(r.id)}')">حفظ البيانات</button>
         <button type="button" class="st-del" onclick="deleteStDetail('${jsAttr(r.id)}','${jsAttr(r.studentName||'الطالب')}')">حذف الطالب</button>
@@ -5881,6 +5897,134 @@ function payStudentRow(s){
   </div>`;
 }
 // === نهاية إضافات v29 ===
+var payView = 'main';
+function payHasDue(r){
+  return /^\d{4}-\d{2}-\d{2}$/.test(String((r && r.paymentDueDate) || '').slice(0, 10));
+}
+function payDueCount(model){
+  let n = 0;
+  (model || []).forEach(g => (g.students || []).forEach(s => { if(payHasDue(s.r)) n++; }));
+  return n;
+}
+function payOpenDueView(){
+  payView = 'due';
+  payQuery = '';
+  try{
+    if(typeof safeHistory === 'function'){
+      safeHistory(()=>history.pushState({route:'payments', modal:false, payView:'due'}, '', location.pathname + location.search));
+    }
+  }catch(e){}
+  render();
+  try{ window.scrollTo(0, 0); }catch(e){}
+}
+function payGoMain(){
+  payView = 'main';
+  try{
+    if(history.state && history.state.payView === 'due'){
+      history.back();
+      return;
+    }
+  }catch(e){}
+  render();
+  try{ window.scrollTo(0, 0); }catch(e){}
+}
+function payDueEntryHtml(model){
+  const n = payDueCount(model);
+  const sub = n
+    ? (n + (n === 1 ? ' طالب ليه موعد محدد' : ' طالب ليهم موعد محدد'))
+    : 'مافيش مواعيد متجدولة — حدّدي الموعد من كارت الطالب';
+  return `<button type="button" class="pay-due-entry" onclick="payOpenDueView()">
+    <span class="pay-due-entry-ic">📅</span>
+    <span class="pay-due-entry-txt"><b>مواعيد الدفع</b><small>${esc(sub)}</small></span>
+    <span class="pay-due-entry-n">${n}</span>
+    <span class="pay-due-entry-go">عرض</span>
+  </button>`;
+}
+function payVisibleDue(g){
+  const q = payQuery.trim().toLowerCase();
+  const qDigits = toLatinDigits(q).replace(/\D/g,'');
+  return g.students
+    .filter(s => payHasDue(s.r) && payMatchQuery(s, g, q, qDigits))
+    .sort((a,b)=> String(a.r.paymentDueDate||'').localeCompare(String(b.r.paymentDueDate||'')) || String(a.r.studentName||'').localeCompare(String(b.r.studentName||''), 'ar'));
+}
+function payDueListHtml(model){
+  const list = (model || [])
+    .map(g => ({ g, vis: payVisibleDue(g) }))
+    .filter(x => x.vis.length)
+    .sort((a,b)=> String(a.vis[0].r.paymentDueDate||'').localeCompare(String(b.vis[0].r.paymentDueDate||'')) || String(a.g.phone||'').localeCompare(String(b.g.phone||''), 'ar'));
+  if(!list.length) return `<div class="empty">${ICON.empty}<div>مافيش مواعيد متجدولة</div><div class="pay-due-empty">من كارت الطالب أو صفحة بياناته اضغطي «موعد الدفع»</div></div>`;
+  return `<div class="pay-grid">${list.map(x=>payGroupCard(x, x.g.students.length)).join('')}</div>`;
+}
+function pagePaymentsDue(model){
+  const n = payDueCount(model);
+  return `
+    <button type="button" class="st-back pay-back" onclick="payGoMain()">→ رجوع للمدفوعات</button>
+    <div class="pay-hero pay-due-hero">
+      <div>
+        <h1 class="page-title">📅 مواعيد الدفع</h1>
+        <p class="pay-hero-sub">الطلاب اللي ليهم موعد دفع محدد — منفصلين عن القائمة الكاملة.</p>
+      </div>
+      <span class="pay-hero-count">${n} طالب</span>
+    </div>
+    <div class="sr-toolbar">
+      <input class="sr-search" id="paySearchInput" placeholder="🔍 دوّر باسم الطالب أو رقم ولي الأمر..." value="${esc(payQuery)}" autocomplete="off" enterkeyhint="search" autocapitalize="off" oninput="payQuery=this.value; renderPayList();">
+    </div>
+    <div id="payListWrap">${payDueListHtml(model)}</div>
+  `;
+}
+function pagePayments(){
+  if(!canSeePayments()) return '';
+  const model = payBuildModel();
+  if(payView === 'due') return pagePaymentsDue(model);
+  const all = []; model.forEach(g=>g.students.forEach(s=>all.push(s)));
+  const cnt = f => all.filter(s=>payMatchFilter(s, f)).length;
+  const needCollect = all.filter(s=>s.st.state === 'done' && s.st.kind === 'لم يدفع').length;
+  const legacyCount = DATA.students.filter(s=>!s.archived).length;
+  const unpaidN = cnt('unpaid'), paidN = cnt('paid'), holdN = cnt('hold');
+  return `
+    <div class="pay-hero">
+      <div>
+        <h1 class="page-title">💳 المدفوعات</h1>
+        <p class="pay-hero-sub">ثلاث حالات يدوية: دفع ويستمر بعد الانتهاء • حتى انتهاء الاشتراك فقط • يجب توقف الحصص. الحالة مش مربوطة بعدد الحصص.</p>
+      </div>
+      <span class="pay-hero-count">${model.length} ولي أمر</span>
+    </div>
+    <div class="stat-row pay-stats">
+      <div class="stat-card"><div class="num">${model.length}</div><div class="lbl">أولياء الأمور</div></div>
+      <div class="stat-card"><div class="num">${all.length}</div><div class="lbl">الطلاب</div></div>
+      <div class="stat-card pay-stat-hold"><div class="num">${holdN}</div><div class="lbl">حتى انتهاء الاشتراك</div></div>
+      <div class="stat-card pay-stat-unpaid"><div class="num">${unpaidN}</div><div class="lbl">توقف الحصص</div></div>
+      <div class="stat-card pay-stat-paid"><div class="num">${paidN}</div><div class="lbl">دفع ويستمر</div></div>
+    </div>
+    ${needCollect?`<div class="pay-alert">🔴 ${needCollect} انتهت حصصهم ولسه ما دفعوش — راجعهم الأول</div>`:''}
+    ${payDueEntryHtml(model)}
+    <div class="pay-chips">
+      ${payChip('all','الكل',all.length)}
+      ${payChip('hold','حتى انتهاء الاشتراك',holdN)}
+      ${payChip('unpaid','توقف الحصص',unpaidN)}
+      ${payChip('paid','دفع ويستمر',paidN)}
+      ${payChip('done','🔴 انتهت',cnt('done'))}
+      ${payChip('warn','🟠 أوشكت',cnt('warn'))}
+      ${payChip('ok','🟢 رصيد متاح',cnt('ok'))}
+      ${payChip('due','📅 قرب الموعد',cnt('due'))}
+    </div>
+    <div class="sr-toolbar">
+      <input class="sr-search" id="paySearchInput" placeholder="🔍 دوّر باسم الطالب أو رقم ولي الأمر..." value="${esc(payQuery)}" autocomplete="off" enterkeyhint="search" autocapitalize="off" oninput="payQuery=this.value; renderPayList();">
+    </div>
+    <div id="payListWrap">${payListHtml(model)}</div>
+    ${(isOwner() && legacyCount) ? `<details class="pay-legacy"><summary>📂 طلاب النظام القديم (${legacyCount})</summary>${pagePaymentsLegacy()}</details>` : ''}
+  `;
+}
+function renderPayList(){
+  const wrap = document.getElementById('payListWrap');
+  if(!wrap) return;
+  wrap.innerHTML = payView === 'due' ? payDueListHtml(payBuildModel()) : payListHtml(payBuildModel());
+}
+function payDueBoardHtml(model){
+  return payDueEntryHtml(model);
+}
+
+// === نهاية إضافات v30 ===
 
 
 
@@ -5896,5 +6040,5 @@ function payStudentRow(s){
 
 
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5a9ccb18d6e3cd2',t:'MTc5NDY5ODk4MA=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5a9ccb18d6e3cd2',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
