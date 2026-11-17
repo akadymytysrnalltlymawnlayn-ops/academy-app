@@ -17,7 +17,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <title>أكاديمية يسرنا</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-version" content="20261111120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
+<meta name="app-version" content="20261112120000"><!-- === تعديل: رفع رقم الإصدار ليظهر زر "تحديث الآن" للأجهزة المفتوحة === -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- === تعديل (أداء): فتح الاتصال مبكرًا بخادم المكتبة وخادم Supabase لتسريع التحميل الأول === -->
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -423,6 +423,47 @@ html.has-session #authScreen{display:none;}
 .pay-due-hero{background:linear-gradient(180deg,#ecfeff,#fff);border:1px solid #a5f3fc;}
 .pay-back{display:inline-flex;align-items:center;}
 .st-due-open{width:100%;border:1px solid #a5f3fc;background:#ecfeff;color:#0e7490;border-radius:12px;padding:8px 10px;font-size:12px;font-weight:800;cursor:pointer;text-align:right;}
+.search-wrap input,#globalSearch,#f_srTeacherName,#f_trTeacherSearch,#f_sTeacherSearch,#stl_link_q,input[placeholder*="حرفين"],input[placeholder*="بحث"],input[placeholder*="دوّر"]{font-size:16px!important;}
+.rp-hero{margin:0 0 12px;}
+.rp-sub{margin:4px 0 0;font-size:12px;font-weight:700;color:#0f766e;}
+.rp-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px;}
+.rp-stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:0 6px 16px rgba(15,23,42,.05);}
+.rp-stat .num{font-size:22px;font-weight:800;color:#0f172a;}
+.rp-stat .lbl{font-size:11px;font-weight:700;color:#64748b;margin-top:2px;}
+.rp-stat.rp-good{background:linear-gradient(180deg,#ecfdf5,#fff);border-color:#6ee7b7;}
+.rp-stat.rp-hot{background:linear-gradient(180deg,#fef2f2,#fff);border-color:#fca5a5;}
+.rp-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:0 6px 16px rgba(15,23,42,.05);}
+.rp-h{font-size:14px;font-weight:800;color:#0f172a;margin-bottom:10px;}
+.rp-pills{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.rp-pill{border-radius:14px;padding:10px 8px;text-align:center;}
+.rp-pill b{display:block;font-size:18px;font-weight:800;}
+.rp-pill span{font-size:11px;font-weight:700;}
+.rp-pill.ok{background:#dcfce7;color:#166534;}
+.rp-pill.bad{background:#fee2e2;color:#991b1b;}
+.rp-pill.hold{background:#fef3c7;color:#92400e;}
+.rp-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;margin:8px 0 4px;}
+.rp-bar{height:8px;background:#f1f5f9;border-radius:99px;overflow:hidden;}
+.rp-bar i{display:block;height:100%;border-radius:99px;}
+.rp-hint{margin:8px 0 0;font-size:11px;font-weight:700;color:#64748b;}
+.rp-week{display:flex;align-items:flex-end;gap:6px;height:90px;}
+.rp-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.rp-stack{width:100%;height:56px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;}
+.rp-stack i{display:block;width:70%;border-radius:6px 6px 2px 2px;min-height:0;}
+.rp-stack i.a{background:#34d399;}
+.rp-stack i.g{background:#fca5a5;}
+.rp-col em{font-style:normal;font-size:11px;font-weight:800;}
+.rp-col small{font-size:9px;font-weight:700;color:#64748b;}
+.rp-split{display:flex;justify-content:space-between;gap:6px;margin-top:10px;font-size:11px;font-weight:800;color:#475569;}
+.rp-teach{margin-bottom:10px;}
+.rp-teach-n{font-size:13px;font-weight:800;}
+.rp-teach-m{font-size:11px;font-weight:700;color:#64748b;margin:2px 0 4px;}
+.rp-empty{font-size:12px;font-weight:700;color:#64748b;padding:6px 0;}
+.rp-dues{display:flex;flex-direction:column;gap:8px;}
+.rp-due{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #cffafe;background:#ecfeff;border-radius:12px;padding:8px 10px;font-size:12px;font-weight:800;color:#0e7490;}
+.rp-due.tone-over{background:#fef2f2;border-color:#fecaca;color:#b91c1c;}
+.rp-due.tone-today{background:#fffbeb;border-color:#fde68a;color:#b45309;}
+.rp-due span{font-weight:700;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
 
 
 .pay-seg-ro{pointer-events:none;}
@@ -454,7 +495,7 @@ html.has-session #authScreen{display:none;}
 .st-kid-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
 .st-kid-grid label,.st-sub-grid label,.st-notes{display:flex;flex-direction:column;gap:3px;font-size:10px;font-weight:700;color:var(--text-dim);position:relative;}
 .st-kid-grid input,.st-sub-grid input,.st-notes input{width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;color:var(--ink);background:#fff;}
-.st-teach{grid-column:1 / -1;}
+.st-teach{grid-column:1 / -1;position:relative;}
 .st-sug{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:8px;max-height:140px;overflow-y:auto;z-index:30;box-shadow:0 8px 20px rgba(15,23,42,.12);}
 .st-sug-item{display:block;width:100%;text-align:right;border:0;background:#fff;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;border-bottom:1px solid #f1f5f9;}
 .st-sug-item:hover{background:#f0fdfa;}
@@ -2021,7 +2062,7 @@ function pageFollowups(){
     <h1 class="page-title">✅ متابعة الحضور</h1>
     <div style="font-size:11.5px;color:var(--text-dim);margin-top:4px;">${isOwner()?'كل الحصص المسجّلة، مقسّمة بالأيام':'الحصص التي سجّلتيها من شاشة الجدول، مقسّمة بالأيام'}</div>
     <div class="sr-toolbar" style="margin-top:12px;">
-      <input class="sr-search" placeholder="🔍 دوّر باسم الطالب أو المعلمة أو المادة أو الملاحظة${isOwner()?' أو المشرفة':''}..." value="${escAttr(fuSearch)}" oninput="fuSearch=this.value; renderFuList();">
+      <input class="sr-search" placeholder="🔍 دوّر باسم الطالب أو المعلمة أو المادة أو الملاحظة${isOwner()?' أو المشرفة':''}..." value="${escAttr(fuSearch)}" autocomplete="off" enterkeyhint="search" autocapitalize="off" spellcheck="false" oninput="fuSearch=this.value; renderFuList();">
     </div>
     ${supChips}
     <div class="fu-chip-row" style="margin-top:0;">
@@ -2158,7 +2199,7 @@ function pageStudentRecords(){
       <span style="font-size:18px;line-height:1;">➕</span> إضافة مشترك جديد
     </button>
     <div class="sr-toolbar">
-      <input class="sr-search" id="srSearchInput" placeholder="🔍 دوّر باسم الطالب، المعلمة، الرقم، أو المادة..." value="${esc(srSearchQuery)}" oninput="srSearchQuery=this.value; renderSrList();">
+      <input class="sr-search" id="srSearchInput" placeholder="🔍 دوّر باسم الطالب، المعلمة، الرقم، أو المادة..." value="${esc(srSearchQuery)}" autocomplete="off" enterkeyhint="search" autocapitalize="off" spellcheck="false" oninput="srSearchQuery=this.value; renderSrList();">
     </div>
     <div id="srListWrap">${renderSrListInner(list)}</div>
   `;
@@ -2711,7 +2752,7 @@ function pageScheduleSessions(){
       <h1 class="page-title">الحصص والجدول</h1>
       <!-- === تعديل: تم حذف زر "إضافة" من صفحة الجدول (الإضافة من بيانات الطلاب أو الصفحة الرئيسية) === -->
     </div>
-    <div class="sched-search-wrap"><input class="sr-search" id="schedSearchInput" placeholder="🔍 ابحث في الجدول: طالب، معلمة، رقم، مادة، أو أي بيان في الكارت..." value="${escAttr(schedQuery)}" oninput="schedQuery=this.value; renderSchedList();"></div>
+    <div class="sched-search-wrap"><input class="sr-search" id="schedSearchInput" placeholder="🔍 ابحث في الجدول: طالب، معلمة، رقم، مادة، أو أي بيان في الكارت..." value="${escAttr(schedQuery)}" autocomplete="off" enterkeyhint="search" autocapitalize="off" spellcheck="false" oninput="schedQuery=this.value; renderSchedList();"></div>
     <!-- === تعديل: شريط أيام جديد (إيموجي + عدد الحصص + تمييز اليوم الحالي واليوم النشط) === -->
     <div class="day-strip" id="dayStrip">
       ${DAYS.map((d,i)=>{
@@ -4263,7 +4304,7 @@ function pageArchive(){
       ${pill('teachers','👩‍🏫 المعلمون', teas.length)}
     </div>`:''}
     <div class="sr-toolbar" style="margin-top:4px;">
-      <input class="sr-search" placeholder="🔍 دوّر في الأرشيف بالاسم، المعلمة، الرقم، أو المادة..." value="${escAttr(arcQuery)}" oninput="arcQuery=this.value; renderArcList();">
+      <input class="sr-search" placeholder="🔍 دوّر في الأرشيف بالاسم، المعلمة، الرقم، أو المادة..." value="${escAttr(arcQuery)}" autocomplete="off" enterkeyhint="search" autocapitalize="off" spellcheck="false" oninput="arcQuery=this.value; renderArcList();">
     </div>
     <div id="arcListWrap">${arcListInner(
       (arcFilter==='all' || arcFilter==='records') ? recs : [],
@@ -6025,6 +6066,198 @@ function payDueBoardHtml(model){
 }
 
 // === نهاية إضافات v30 ===
+function isConsumedSession(status){
+  return String(status || '').trim() === 'حضر';
+}
+function buildAttendanceMap(){
+  const m = new Map();
+  const anchors = new Map();
+  (DATA.student_records || []).forEach(r => { if(r.cycleAnchor) anchors.set(r.id, r.cycleAnchor); });
+  const arr = DATA.followups || [];
+  for(let i = 0; i < arr.length; i++){
+    const f = arr[i];
+    if(!isConsumedSession(f.status)) continue;
+    if(anchors.size){
+      const a = anchors.get(f.recordId);
+      if(a && (f.date + ' ' + String(f.slotTime || '').slice(0, 5)) <= a) continue;
+    }
+    let s = m.get(f.recordId);
+    if(!s){ s = new Set(); m.set(f.recordId, s); }
+    s.add(f.date + '|' + f.slotTime);
+  }
+  return m;
+}
+function remainChip(r){
+  const total = sessionTotal(r);
+  if(!total) return '';
+  const used = displayAttended(r);
+  const left = Math.max(0, total - used);
+  const pct = Math.min(100, Math.round(used / total * 100));
+  const cls = left === 0 ? 'done' : (left === 1 ? 'warn' : 'ok');
+  const lbl = left === 0 ? 'انتهت الحصص' : ('تبقّى ' + left + (left === 1 ? ' حصة' : ' حصص'));
+  return `<div class="sc2-remain ${cls}" title="يُخصم الحضور فقط — الغياب والتأجيل ماينقصوش الرصيد"><span class="sc2-remain-lbl">${lbl}</span><span class="sc2-remain-n">${used} / ${total}</span><span class="sc2-remain-bar"><i style="width:${pct}%"></i></span></div>`;
+}
+function balanceChip(r){
+  const total = sessionTotal(r);
+  if(!total) return '';
+  const used = attendedCount(r.id);
+  const cls = used >= total ? 'done' : (total - used === 1 ? 'warn' : '');
+  const pct = Math.min(100, Math.round(used / total * 100));
+  return `<div class="sc-bal ${cls}" title="الحضور فقط من إجمالي الاشتراك"><span>🔢</span><b>${used}</b><span>من</span><b>${total}</b><span class="sc-bal-bar"><i style="width:${pct}%"></i></span></div>`;
+}
+function srUsedEditor(r){
+  const total = sessionTotal(r);
+  const used = displayAttended(r);
+  const of = total ? ('من ' + total) : '';
+  return `<div class="sr-used" onclick="event.stopPropagation()">
+    <span class="sr-used-lbl">الحصص التي تمت (حضور فقط)</span>
+    <div class="sr-used-row">
+      <button type="button" class="sr-used-btn" title="نقص حصة" onclick="event.stopPropagation();adjustSessionUsed('${r.id}',-1)">−</button>
+      <input class="sr-used-inp" inputmode="numeric" value="${used}" onchange="setSessionUsed('${r.id}', this.value)" onclick="event.stopPropagation()">
+      <span class="sr-used-of">${of}</span>
+      <button type="button" class="sr-used-btn" title="زيادة حصة حضور" onclick="event.stopPropagation();adjustSessionUsed('${r.id}',1)">+</button>
+    </div>
+  </div>`;
+}
+function rpIso(d){
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function rpMonthStart(){
+  const n = new Date();
+  return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-01';
+}
+function rpBar(pct, color){
+  const p = Math.max(0, Math.min(100, Number(pct) || 0));
+  return `<div class="rp-bar"><i style="width:${p}%;background:${color}"></i></div>`;
+}
+function rpStat(num, lbl, extra){
+  return `<div class="rp-stat ${extra || ''}"><div class="num">${num}</div><div class="lbl">${lbl}</div></div>`;
+}
+function pageReports(){
+  if(!isOwner()) return '';
+  const recs = (DATA.student_records || []).filter(r => !r.archived);
+  const teachers = (DATA.teachers || []).filter(t => !t.archived);
+  const monthFrom = rpMonthStart();
+  const today = localDateStr(new Date());
+  const fus = (DATA.followups || []).filter(f => f.date && f.date >= monthFrom && f.date <= today);
+  const att = fus.filter(f => isConsumedSession(f.status)).length;
+  const abs = fus.filter(f => String(f.status || '').trim() === 'غاب').length;
+  const post = fus.filter(f => String(f.status || '').trim() === 'تأجيل').length;
+  const decided = att + abs;
+  const rate = decided ? Math.round(att * 100 / decided) : 0;
+  let paid = 0, hold = 0, unpaid = 0, okN = 0, warnN = 0, doneN = 0;
+  recs.forEach(r => {
+    const k = effectivePayKind(r);
+    if(k === 'دفع') paid++;
+    else if(k === 'معلق') hold++;
+    else unpaid++;
+    const st = payState(r);
+    if(st.state === 'ok') okN++;
+    else if(st.state === 'warn') warnN++;
+    else if(st.state === 'done') doneN++;
+  });
+  const week = [];
+  let weekMax = 1;
+  for(let i = 6; i >= 0; i--){
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const iso = rpIso(d);
+    const dayF = (DATA.followups || []).filter(f => f.date === iso);
+    const a = dayF.filter(f => isConsumedSession(f.status)).length;
+    const b = dayF.filter(f => String(f.status || '').trim() === 'غاب').length;
+    weekMax = Math.max(weekMax, a + b);
+    const di = {0:1,1:2,2:3,3:4,4:5,5:6,6:0}[d.getDay()];
+    week.push({ iso, a, b, lbl: String(DAYS[di] || '').slice(0, 3), n: String(d.getDate()) });
+  }
+  const byT = {};
+  recs.forEach(r => {
+    const n = (r.teacherName || '').trim() || 'بدون معلمة';
+    if(!byT[n]) byT[n] = { name: n, students: 0, att: 0, abs: 0 };
+    byT[n].students++;
+  });
+  fus.forEach(f => {
+    const n = (f.teacherName || '').trim();
+    if(!n || !byT[n]) return;
+    if(isConsumedSession(f.status)) byT[n].att++;
+    else if(String(f.status || '').trim() === 'غاب') byT[n].abs++;
+  });
+  const tRows = Object.keys(byT).map(k => byT[k]).sort((a,b) => b.students - a.students).slice(0, 8);
+  const dues = recs.filter(r => payHasDue(r)).sort((a,b) => String(a.paymentDueDate).localeCompare(String(b.paymentDueDate))).slice(0, 8);
+  const monthLbl = new Date().toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
+  const attTotal = att + abs + post;
+  return `
+    <div class="rp-hero">
+      <div>
+        <h1 class="page-title">📊 التقارير</h1>
+        <p class="rp-sub">نبض الأكاديمية • ${esc(monthLbl)} • الحضور يتحسب من «حضر» فقط</p>
+      </div>
+    </div>
+    <div class="rp-stats">
+      ${rpStat(recs.length, 'طلاب نشطين')}
+      ${rpStat(teachers.length, 'معلمات')}
+      ${rpStat((rate || 0) + '%', 'حضور الشهر', 'rp-good')}
+      ${rpStat(doneN, 'باقة خلصت', doneN ? 'rp-hot' : '')}
+    </div>
+    <section class="rp-card">
+      <div class="rp-h">الحضور هذا الشهر</div>
+      <div class="rp-pills">
+        <div class="rp-pill ok"><b>${att}</b><span>حضر</span></div>
+        <div class="rp-pill bad"><b>${abs}</b><span>غاب</span></div>
+        <div class="rp-pill hold"><b>${post}</b><span>تأجيل</span></div>
+      </div>
+      <div class="rp-row"><span>نسبة الحضور من المحسوم</span><b>${decided ? rate + '%' : '—'}</b></div>
+      ${rpBar(rate, '#10b981')}
+      <p class="rp-hint">الغياب والتأجيل ظاهرين للمتابعة، ومن غير خصم من رصيد الاشتراك.</p>
+    </section>
+    <section class="rp-card">
+      <div class="rp-h">آخر 7 أيام</div>
+      <div class="rp-week">${week.map(d => {
+        const h = Math.round((d.a / weekMax) * 56);
+        const g = Math.round((d.b / weekMax) * 56);
+        return `<div class="rp-col" title="${escAttr(d.iso)}: حضر ${d.a} / غاب ${d.b}">
+          <div class="rp-stack"><i class="g" style="height:${g}px"></i><i class="a" style="height:${h}px"></i></div>
+          <em>${esc(d.n)}</em><small>${esc(d.lbl)}</small>
+        </div>`;
+      }).join('')}</div>
+    </section>
+    <section class="rp-card">
+      <div class="rp-h">الاشتراكات</div>
+      <div class="rp-row"><span>${payKindLabel('دفع')}</span><b>${paid}</b></div>${rpBar(recs.length ? paid * 100 / recs.length : 0, '#22c55e')}
+      <div class="rp-row"><span>${payKindLabel('معلق')}</span><b>${hold}</b></div>${rpBar(recs.length ? hold * 100 / recs.length : 0, '#eab308')}
+      <div class="rp-row"><span>${payKindLabel('لم يدفع')}</span><b>${unpaid}</b></div>${rpBar(recs.length ? unpaid * 100 / recs.length : 0, '#ef4444')}
+      <div class="rp-split">
+        <span>رصيد متاح ${okN}</span>
+        <span>أوشكت ${warnN}</span>
+        <span>انتهت ${doneN}</span>
+      </div>
+    </section>
+    <section class="rp-card">
+      <div class="rp-h">المعلمات</div>
+      ${tRows.length ? tRows.map(t => {
+        const dec = t.att + t.abs;
+        const tr = dec ? Math.round(t.att * 100 / dec) : 0;
+        return `<div class="rp-teach">
+          <div class="rp-teach-n">${esc(t.name)}</div>
+          <div class="rp-teach-m">${t.students} طالب • حضور ${dec ? tr + '%' : '—'}</div>
+          ${rpBar(tr, '#06b6d4')}
+        </div>`;
+      }).join('') : `<div class="rp-empty">مافيش معلمات مربوطين بطلاب</div>`}
+    </section>
+    <section class="rp-card">
+      <div class="rp-h">مواعيد دفع قريبة</div>
+      ${dues.length ? `<div class="rp-dues">${dues.map(r => {
+        const t = payDueTone(r.paymentDueDate);
+        return `<button type="button" class="rp-due tone-${t}" onclick="payView='due';goTo('payments');">
+          <b>${esc(formatPayDue(r.paymentDueDate))}</b>
+          <span>${esc(r.studentName || '—')}</span>
+        </button>`;
+      }).join('')}</div>` : `<div class="rp-empty">مافيش مواعيد متجدولة</div>`}
+    </section>
+    ${typeof teacherPayrollSection === 'function' ? teacherPayrollSection() : ''}
+  `;
+}
+
+// === نهاية إضافات v31 ===
 
 
 
@@ -6040,5 +6273,5 @@ function payDueBoardHtml(model){
 
 
 </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5bc48249a72164b',t:'MTc5NDg5Mjc4MA=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5bc48249a72164b',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
